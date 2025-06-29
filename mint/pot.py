@@ -30,19 +30,22 @@ class ProgramOfThoughtsPrompting:
     then executes the code to get the numerical result.
     """
     
-    def __init__(self, model_name: str = "gpt-4", temperature: float = 0.0):
+    def __init__(self, model_name: str = None, temperature: float = None):
         """
         Initialize the Program of Thoughts prompting system.
         
         Args:
-            model_name: The OpenAI model to use
-            temperature: Temperature for response generation
+            model_name: The OpenAI model to use (defaults to config value)
+            temperature: Temperature for response generation (defaults to config value)
         """
-        self.model_name = model_name
-        self.temperature = temperature
+        from .config import load_config
+        config = load_config()
+        
+        self.model_name = model_name or config['model']
+        self.temperature = temperature if temperature is not None else config['temperature']
         self.llm = ChatOpenAI(
-            model_name=model_name,
-            temperature=temperature
+            model_name=self.model_name,
+            temperature=self.temperature
         )
         
         # PoT prompt template with few-shot examples
@@ -435,18 +438,23 @@ Code:
         return None
 
 
-def solve_with_pot(question: str, context: str = "", model_name: str = "gpt-4") -> Optional[float]:
+def solve_with_pot(question: str, context: str = "", model_name: str = None) -> Optional[float]:
     """
     Convenience function to solve a problem using Program of Thoughts prompting.
     
     Args:
         question: The mathematical question to solve
         context: Additional context for the problem
-        model_name: The OpenAI model to use
+        model_name: The OpenAI model to use (defaults to config value)
         
     Returns:
         The numerical answer, or None if the problem couldn't be solved
     """
+    from .config import load_config
+    if model_name is None:
+        config = load_config()
+        model_name = config['model']
+        
     pot = ProgramOfThoughtsPrompting(model_name=model_name)
     result = pot.solve_silent(question, context)
     return result.get('result') 

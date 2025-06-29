@@ -40,10 +40,15 @@ Examples:
         help='Additional context for the problem'
     )
     
+    # Load default model from config
+    from mint.config import load_config
+    config = load_config()
+    default_model = config['model']
+    
     parser.add_argument(
         '--model',
-        default='gpt-4',
-        help='OpenAI model to use (default: gpt-4)'
+        default=default_model,
+        help=f'OpenAI model to use (default: {default_model})'
     )
     
     parser.add_argument(

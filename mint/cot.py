@@ -23,19 +23,22 @@ class ChainOfThoughtPrompting:
     showing its reasoning process before arriving at the final answer.
     """
     
-    def __init__(self, model_name: str = "gpt-4", temperature: float = 0.0):
+    def __init__(self, model_name: str = None, temperature: float = None):
         """
         Initialize the Chain-of-Thought prompting system.
         
         Args:
-            model_name: The OpenAI model to use
-            temperature: Temperature for response generation
+            model_name: The OpenAI model to use (defaults to config value)
+            temperature: Temperature for response generation (defaults to config value)
         """
-        self.model_name = model_name
-        self.temperature = temperature
+        from .config import load_config
+        config = load_config()
+        
+        self.model_name = model_name or config['model']
+        self.temperature = temperature if temperature is not None else config['temperature']
         self.llm = ChatOpenAI(
-            model_name=model_name,
-            temperature=temperature
+            model_name=self.model_name,
+            temperature=self.temperature
         )
         
         # CoT prompt template with few-shot examples
@@ -239,18 +242,23 @@ Let me work through this:"""
         return None
 
 
-def solve_with_cot(question: str, context: str = "", model_name: str = "gpt-4") -> Optional[float]:
+def solve_with_cot(question: str, context: str = "", model_name: str = None) -> Optional[float]:
     """
     Convenience function for solving math problems with Chain-of-Thought prompting.
     
     Args:
         question: The mathematical question to solve
         context: Additional context for the problem
-        model_name: The OpenAI model to use
+        model_name: The OpenAI model to use (defaults to config value)
         
     Returns:
         The numerical result, or None if solving failed
     """
+    from .config import load_config
+    if model_name is None:
+        config = load_config()
+        model_name = config['model']
+        
     cot = ChainOfThoughtPrompting(model_name=model_name)
     result = cot.solve_silent(question, context)
     return result.get('result') 
