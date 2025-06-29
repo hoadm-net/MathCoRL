@@ -355,12 +355,15 @@ def main():
         elif args.command == 'solve':
             result = solve_single(args.method, args.question, args.context, 
                                 not args.no_code)
-            if result.get('success', False):
+            # Check if we have a valid result (works for all methods)
+            if result.get('result') is not None:
                 print(f"✅ Answer: {result['result']}")
             else:
                 print("❌ Could not solve the problem")
                 if 'error' in result:
                     print(f"Error: {result['error']}")
+                if 'execution_error' in result and result['execution_error']:
+                    print(f"Execution Error: {result['execution_error']}")
         
         elif args.command == 'test':
             test_method(args.method, args.dataset, args.limit, 

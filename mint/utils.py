@@ -114,11 +114,15 @@ def execute_code(code: str) -> Tuple[Any, str]:
         # Execute code
         exec(code, namespace, namespace)
         
-        # Get result
+        # Get result - check multiple possible variable names
         if 'result' in namespace:
             return namespace['result'], ""
+        elif 'answer' in namespace:
+            return namespace['answer'], ""
+        elif 'solution' in namespace:
+            return namespace['solution'], ""
         else:
-            return None, "Variable 'result' not found in code"
+            return None, "Variable 'result', 'answer', or 'solution' not found in code"
             
     except Exception as e:
         error_msg = f"Error executing code: {str(e)}\n{traceback.format_exc()}"

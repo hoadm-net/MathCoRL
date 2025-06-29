@@ -69,20 +69,20 @@ eggs_eaten = 3
 eggs_for_muffins = 4
 price_per_egg = 2
 
-print(f"Total eggs per day: {eggs_per_day}")
-print(f"Eggs eaten: {eggs_eaten}")
-print(f"Eggs used for muffins: {eggs_for_muffins}")
+print(f"Total eggs per day: {{eggs_per_day}}")
+print(f"Eggs eaten: {{eggs_eaten}}")
+print(f"Eggs used for muffins: {{eggs_for_muffins}}")
 
 # Calculate eggs left to sell
 eggs_to_sell = eggs_per_day - eggs_eaten - eggs_for_muffins
-print(f"Eggs left to sell: {eggs_to_sell}")
+print(f"Eggs left to sell: {{eggs_to_sell}}")
 
 # Calculate daily earnings
 daily_earnings = eggs_to_sell * price_per_egg
-print(f"Daily earnings: ${daily_earnings}")
+print(f"Daily earnings: ${{daily_earnings}}")
 
 answer = daily_earnings
-print(f"Final answer: {answer}")
+print(f"Final answer: {{answer}}")
 ```
 
 Example 2:
@@ -94,15 +94,15 @@ Code:
 girls = 569
 boys = 236
 
-print(f"Number of girls: {girls}")
-print(f"Number of boys: {boys}")
+print(f"Number of girls: {{girls}}")
+print(f"Number of boys: {{boys}}")
 
 # Calculate the difference
 difference = girls - boys
-print(f"Difference: {difference}")
+print(f"Difference: {{difference}}")
 
 answer = difference
-print(f"Final answer: {answer}")
+print(f"Final answer: {{answer}}")
 ```
 
 Example 3:
@@ -117,18 +117,18 @@ initial_apples = 20
 fraction_given = 1/4
 apples_eaten = 3
 
-print(f"Initial apples: {initial_apples}")
+print(f"Initial apples: {{initial_apples}}")
 
 # Calculate apples given to friend
 apples_given = initial_apples * fraction_given
-print(f"Apples given to friend: {apples_given}")
+print(f"Apples given to friend: {{apples_given}}")
 
 # Calculate remaining apples
 apples_left = initial_apples - apples_given - apples_eaten
-print(f"Apples left: {apples_left}")
+print(f"Apples left: {{apples_left}}")
 
 answer = apples_left
-print(f"Final answer: {answer}")
+print(f"Final answer: {{answer}}")
 ```
 
 Now solve this problem:
@@ -291,17 +291,53 @@ Code:
             Dictionary containing execution results
         """
         try:
-            result = execute_code(code)
+            # execute_code returns (result, error_message) tuple
+            result_value, error_message = execute_code(code)
+            
+            # Capture stdout for output
+            import io
+            import sys
+            from contextlib import redirect_stdout
+            
+            output = ""
+            locals_dict = {}
+            
+            try:
+                # Re-execute to capture stdout and locals
+                f = io.StringIO()
+                namespace = {}
+                
+                # Import the execution namespace
+                from .functions import get_execution_namespace
+                namespace.update(get_execution_namespace())
+                
+                with redirect_stdout(f):
+                    exec(code, namespace, namespace)
+                
+                output = f.getvalue()
+                locals_dict = {k: v for k, v in namespace.items() 
+                              if not k.startswith('__') and not callable(v)}
+                
+            except Exception:
+                # If re-execution fails, just use what we have
+                pass
+            
+            execution_result = {
+                'output': output,
+                'error': error_message,
+                'locals': locals_dict,
+                'result': result_value
+            }
             
             if show_output:
                 print(f"🚀 Code Execution:")
-                if result.get('output'):
-                    print(result['output'])
-                if result.get('error'):
-                    print(f"❌ Execution Error: {result['error']}")
+                if output:
+                    print(output)
+                if error_message:
+                    print(f"❌ Execution Error: {error_message}")
                 print()
             
-            return result
+            return execution_result
             
         except Exception as e:
             error_msg = f"Execution failed: {str(e)}"
@@ -313,7 +349,8 @@ Code:
             return {
                 'output': '',
                 'error': error_msg,
-                'locals': {}
+                'locals': {},
+                'result': None
             }
     
     def _extract_answer_from_execution(self, execution_result: Dict[str, Any], code: str) -> Optional[Union[int, float]]:
@@ -327,7 +364,14 @@ Code:
         Returns:
             The extracted numerical answer, or None if not found
         """
-        # First try to get 'answer' variable from execution locals
+        # First try to get direct 'result' from execution
+        if 'result' in execution_result and execution_result['result'] is not None:
+            try:
+                return float(execution_result['result'])
+            except (ValueError, TypeError):
+                pass
+        
+        # Then try to get 'answer' variable from execution locals
         if 'locals' in execution_result and execution_result['locals']:
             locals_dict = execution_result['locals']
             
