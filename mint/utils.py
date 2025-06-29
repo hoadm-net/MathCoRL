@@ -8,10 +8,15 @@ import json
 import os
 import re
 import traceback
+import logging
+import pandas as pd
 from pathlib import Path
 from typing import Dict, List, Any, Tuple, Optional
 
 from .functions import get_execution_namespace
+
+# Setup logger
+logger = logging.getLogger(__name__)
 
 
 def get_datasets_dir() -> str:
@@ -136,4 +141,428 @@ def evaluate_result(predicted: Any, ground_truth: float) -> bool:
         pred_float = float(predicted)
         return abs(pred_float - ground_truth) < 1e-6
     except (ValueError, TypeError):
-        return False 
+        return False
+
+
+def load_svamp_test_data(file_path: str, limit: int = 100):
+    """
+    Load test data from the SVAMP dataset.
+
+    Args:
+        file_path: Path to the test.json file.
+        limit: Number of samples to load.
+
+    Returns:
+        A list of dictionaries with 'context', 'question', and 'ground_truth'.
+    """
+    with open(file_path, 'r') as file:
+        data = json.load(file)
+        test_data = [
+            {
+                'context': item['Body'],
+                'question': item['Question'],
+                'ground_truth': item['Answer']
+            }
+            for item in data[:limit]
+        ]
+    return test_data
+
+
+def load_gsm8k_test_data(filepath: str) -> list:
+    """
+    Load GSM8K test data from JSONL file.
+    
+    Args:
+        filepath: Path to GSM8K test.jsonl file
+        
+    Returns:
+        List of dictionaries with 'question', 'context', and 'ground_truth' keys
+    """
+    data = []
+    
+    try:
+        with open(filepath, 'r', encoding='utf-8') as f:
+            for line in f:
+                if line.strip():
+                    item = json.loads(line.strip())
+                    
+                    # Extract answer after "#### "
+                    answer_text = item['answer']
+                    ground_truth = None
+                    
+                    if '#### ' in answer_text:
+                        # Extract the number after "#### "
+                        answer_part = answer_text.split('#### ')[-1]
+                        try:
+                            # Handle cases with commas in numbers (e.g., "1,000")
+                            clean_answer = answer_part.replace(',', '').strip()
+                            ground_truth = float(clean_answer)
+                        except ValueError:
+                            logger.warning(f"Could not parse answer: {answer_part}")
+                            continue
+                    
+                    if ground_truth is not None:
+                        data.append({
+                            'question': item['question'],
+                            'context': '',  # GSM8K doesn't have context
+                            'ground_truth': ground_truth
+                        })
+                    
+    except FileNotFoundError:
+        logger.error(f"File not found: {filepath}")
+        return []
+    except Exception as e:
+        logger.error(f"Error loading GSM8K data: {e}")
+        return []
+    
+    logger.info(f"Loaded {len(data)} GSM8K test samples")
+    return data 
+
+
+def load_tabmwp_test_data(filepath: str) -> list:
+    """
+    Load TabMWP test data from JSON file.
+    Only loads free_text questions (ignores multi_choice).
+    
+    Args:
+        filepath: Path to TabMWP test.json file
+        
+    Returns:
+        List of dictionaries with 'question', 'context', and 'ground_truth' keys
+    """
+    data = []
+    
+    try:
+        with open(filepath, 'r', encoding='utf-8') as f:
+            tabmwp_data = json.load(f)
+            
+        for key, item in tabmwp_data.items():
+            # Only process free_text questions
+            if item.get('ques_type') == 'free_text':
+                # Create context from table_title and table_for_pd
+                context = ""
+                
+                # Add table title if available
+                if item.get('table_title'):
+                    context += item['table_title'] + "\n\n"
+                
+                # Convert table_for_pd to markdown format
+                table_for_pd = item.get('table_for_pd', {})
+                if table_for_pd:
+                    # Create simple markdown table format
+                    headers = list(table_for_pd.keys())
+                    if headers:
+                        # Add headers
+                        context += "| " + " | ".join(headers) + " |\n"
+                        # Add separator
+                        context += "| " + " | ".join(["---"] * len(headers)) + " |\n"
+                        
+                        # Add data rows
+                        num_rows = len(table_for_pd[headers[0]])
+                        for i in range(num_rows):
+                            row = []
+                            for header in headers:
+                                row.append(str(table_for_pd[header][i]))
+                            context += "| " + " | ".join(row) + " |\n"
+                
+                # Parse ground truth
+                try:
+                    answer = item.get('answer', '')
+                    # Handle different answer formats
+                    if answer:
+                        # Handle fraction format like "3/10", "2/11"
+                        if '/' in str(answer) and len(str(answer).split('/')) == 2:
+                            numerator, denominator = str(answer).split('/')
+                            try:
+                                ground_truth = float(numerator) / float(denominator)
+                            except (ValueError, ZeroDivisionError):
+                                # If fraction parsing fails, try normal parsing
+                                clean_answer = str(answer).replace(',', '').replace('$', '').strip()
+                                ground_truth = float(clean_answer)
+                        else:
+                            # Remove commas and dollar signs, convert to float
+                            clean_answer = str(answer).replace(',', '').replace('$', '').strip()
+                            ground_truth = float(clean_answer)
+                    else:
+                        continue
+                except (ValueError, TypeError):
+                    logger.warning(f"Could not parse answer: {item.get('answer')}")
+                    continue
+                
+                data.append({
+                    'question': item.get('question', ''),
+                    'context': context.strip(),
+                    'ground_truth': ground_truth
+                })
+                    
+    except FileNotFoundError:
+        logger.error(f"File not found: {filepath}")
+        return []
+    except Exception as e:
+        logger.error(f"Error loading TabMWP data: {e}")
+        return []
+    
+    logger.info(f"Loaded {len(data)} TabMWP free_text test samples")
+    return data 
+
+
+def load_tatqa_test_data(filepath: str) -> list:
+    """
+    Load TAT-QA test data from JSON file.
+    Only loads arithmetic questions (ignores other answer_types).
+    
+    Args:
+        filepath: Path to TAT-QA test.json file
+        
+    Returns:
+        List of dictionaries with 'question', 'context', and 'ground_truth' keys
+    """
+    data = []
+    
+    try:
+        with open(filepath, 'r', encoding='utf-8') as f:
+            tatqa_data = json.load(f)
+            
+        for item in tatqa_data:
+            # 1. Process table
+            table_string = ""
+            if 'table' in item and 'table' in item['table']:
+                table_data = item['table']['table']
+                if table_data:
+                    # Convert table (list of lists) to DataFrame then to markdown
+                    df = pd.DataFrame(table_data)
+                    # Create simple markdown table format
+                    table_rows = []
+                    for row_idx, row in enumerate(table_data):
+                        # Clean empty cells and create row
+                        clean_row = [str(cell).strip() if cell else "" for cell in row]
+                        table_rows.append("| " + " | ".join(clean_row) + " |")
+                        
+                        # Add separator after first row (header)
+                        if row_idx == 0:
+                            table_rows.append("| " + " | ".join(["---"] * len(clean_row)) + " |")
+                    
+                    table_string = "\n".join(table_rows)
+            
+            # 2. Process paragraphs
+            paragraph_string = ""
+            if 'paragraphs' in item:
+                # Sort paragraphs by order
+                sorted_paragraphs = sorted(item['paragraphs'], key=lambda x: x.get('order', 0))
+                paragraph_texts = [p.get('text', '').strip() for p in sorted_paragraphs if p.get('text')]
+                paragraph_string = " ".join(paragraph_texts)
+            
+            # 3. Create context
+            context = ""
+            if table_string:
+                context += table_string
+            if paragraph_string:
+                if context:
+                    context += "\n\n"
+                context += paragraph_string
+            
+            # 4. Process questions - only arithmetic ones
+            if 'questions' in item:
+                for question_item in item['questions']:
+                    if question_item.get('answer_type') == 'arithmetic':
+                        try:
+                            # Extract question and answer
+                            question = question_item.get('question', '').strip()
+                            answer = question_item.get('answer')
+                            
+                            # Parse ground truth (should be a number for arithmetic)
+                            if isinstance(answer, (int, float)):
+                                ground_truth = float(answer)
+                            elif isinstance(answer, list) and len(answer) > 0:
+                                ground_truth = float(answer[0])
+                            else:
+                                ground_truth = float(answer)
+                                
+                            data.append({
+                                'question': question,
+                                'context': context.strip(),
+                                'ground_truth': ground_truth
+                            })
+                            
+                        except (ValueError, TypeError) as e:
+                            logger.warning(f"Could not parse arithmetic answer: {question_item.get('answer')} - {e}")
+                            continue
+                    
+    except FileNotFoundError:
+        logger.error(f"File not found: {filepath}")
+        return []
+    except Exception as e:
+        logger.error(f"Error loading TAT-QA data: {e}")
+        return []
+    
+    logger.info(f"Loaded {len(data)} TAT-QA arithmetic test samples")
+    return data 
+
+
+def FinQA_generate_candidates(val: float) -> list:
+    """
+    Generate candidate answers for FinQA evaluation.
+    FinQA has inconsistent rounding and percentage formats, so we generate
+    multiple possible representations of the same semantic value.
+    
+    Args:
+        val: The calculated result value
+        
+    Returns:
+        List of candidate values that could be semantically equivalent
+    """
+    if not isinstance(val, (int, float)):
+        return [-99999]
+
+    val = float(val)
+    candidates = list()
+    
+    # Original value with different rounding
+    candidates.append(val)
+    candidates.append(round(val, 0))
+    candidates.append(round(val, 1))
+    candidates.append(round(val, 2))
+    candidates.append(round(val, 3))
+
+    # Convert to percentage (divide by 100)
+    percentage = val / 100
+    candidates.append(round(percentage, 0))
+    candidates.append(round(percentage, 1))
+    candidates.append(round(percentage, 2))
+    candidates.append(round(percentage, 3))
+
+    # Convert from percentage (multiply by 100)
+    percentage = val * 100
+    candidates.append(round(percentage, 0))
+    candidates.append(round(percentage, 1))
+    candidates.append(round(percentage, 2))
+    candidates.append(round(percentage, 3))
+
+    return candidates
+
+
+def load_finqa_test_data(filepath: str) -> list:
+    """
+    Load FinQA test data from JSON file.
+    
+    Args:
+        filepath: Path to FinQA test.json file
+        
+    Returns:
+        List of dictionaries with 'question', 'context', and 'ground_truth' keys
+    """
+    data = []
+    
+    try:
+        with open(filepath, 'r', encoding='utf-8') as f:
+            finqa_data = json.load(f)
+            
+        for item in finqa_data:
+            # 1. Process pre_text
+            pre_text = ""
+            if 'pre_text' in item and item['pre_text']:
+                pre_text = " ".join(item['pre_text']).strip()
+            
+            # 2. Process table_ori
+            table_string = ""
+            if 'table_ori' in item and item['table_ori']:
+                table_data = item['table_ori']
+                if table_data:
+                    # Create simple markdown table format
+                    table_rows = []
+                    for row_idx, row in enumerate(table_data):
+                        # Clean HTML tags and create row
+                        clean_row = []
+                        for cell in row:
+                            # Remove HTML tags like <i>, <sup>, etc.
+                            clean_cell = str(cell).replace('<i>', '').replace('</i>', '')
+                            clean_cell = clean_cell.replace('<sup>', '').replace('</sup>', '')
+                            clean_cell = clean_cell.replace('<sub>', '').replace('</sub>', '')
+                            clean_cell = clean_cell.strip()
+                            clean_row.append(clean_cell)
+                        
+                        table_rows.append("| " + " | ".join(clean_row) + " |")
+                        
+                        # Add separator after first row (header)
+                        if row_idx == 0:
+                            table_rows.append("| " + " | ".join(["---"] * len(clean_row)) + " |")
+                    
+                    table_string = "\n".join(table_rows)
+            
+            # 3. Process post_text
+            post_text = ""
+            if 'post_text' in item and item['post_text']:
+                post_text = " ".join(item['post_text']).strip()
+            
+            # 4. Create context: pre_text + table + post_text
+            context_parts = []
+            if pre_text:
+                context_parts.append(pre_text)
+            if table_string:
+                context_parts.append(table_string)
+            if post_text:
+                context_parts.append(post_text)
+            
+            context = "\n\n".join(context_parts)
+            
+            # 5. Process qa
+            if 'qa' in item:
+                qa = item['qa']
+                question = qa.get('question', '').strip()
+                answer = qa.get('answer', '')
+                
+                # Parse ground truth - handle percentage strings and complex formats
+                try:
+                    # Remove percentage sign and convert
+                    if isinstance(answer, str):
+                        # Clean the answer string
+                        clean_answer = answer.strip()
+                        
+                        # Handle newline characters
+                        clean_answer = clean_answer.replace('\\n', '').replace('\n', '')
+                        
+                        # Skip non-numeric answers
+                        if clean_answer.lower() in ['yes', 'no', ''] or 'million' in clean_answer.lower() or 'thousand' in clean_answer.lower():
+                            continue
+                            
+                        # Handle complex multi-part answers
+                        if ' or ' in clean_answer:
+                            # Take the first part
+                            clean_answer = clean_answer.split(' or ')[0]
+                        
+                        # Remove currency symbols and units
+                        clean_answer = clean_answer.replace('%', '').replace(',', '').replace('$', '').strip()
+                        
+                        # Try to extract first number if it's a complex string
+                        import re
+                        numbers = re.findall(r'-?\d+\.?\d*', clean_answer)
+                        if numbers:
+                            ground_truth = float(numbers[0])
+                        else:
+                            continue
+                        
+                        # If original had %, note it for semantic understanding
+                        # But we'll handle this in the candidate generation
+                    else:
+                        ground_truth = float(answer)
+                    
+                    data.append({
+                        'question': question,
+                        'context': context.strip(),
+                        'ground_truth': ground_truth,
+                        'original_answer': answer  # Keep original for reference
+                    })
+                    
+                except (ValueError, TypeError) as e:
+                    logger.warning(f"Could not parse FinQA answer: {answer} - {e}")
+                    continue
+                    
+    except FileNotFoundError:
+        logger.error(f"File not found: {filepath}")
+        return []
+    except Exception as e:
+        logger.error(f"Error loading FinQA data: {e}")
+        return []
+    
+    logger.info(f"Loaded {len(data)} FinQA test samples")
+    return data
