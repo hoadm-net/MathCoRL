@@ -13,7 +13,6 @@ results/*.json
 # Test files (temporary)
 *_test_results.json
 test_*.py
-!test_svamp.py
 
 # Large dataset files (if any)
 datasets/*/large_*
