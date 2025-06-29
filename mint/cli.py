@@ -33,7 +33,8 @@ from .core import FunctionPrototypePrompting
 from .cot import ChainOfThoughtPrompting
 from .pot import ProgramOfThoughtsPrompting
 from .zero_shot import ZeroShotPrompting
-from .testing import TestRunner, DatasetLoader, create_fpp_solver, create_cot_solver, create_pot_solver, create_zero_shot_solver
+from .pal import ProgramAidedLanguageModel
+from .testing import TestRunner, DatasetLoader, create_fpp_solver, create_cot_solver, create_pot_solver, create_zero_shot_solver, create_pal_solver
 from .evaluation import get_tolerance_function
 
 
@@ -54,11 +55,12 @@ def interactive_mode():
     print("2. CoT (Chain-of-Thought) - Step-by-step reasoning")
     print("3. PoT (Program of Thoughts) - Generate Python code to solve problems")
     print("4. Zero-Shot - Direct problem solving without examples")
+    print("5. PAL (Program-aided Language Models) - Reasoning + code generation")
     print("Type 'exit' to quit, 'help' for help, 'switch' to change method\n")
     
     # Choose initial method
     while True:
-        method_choice = input("Select method (1 for FPP, 2 for CoT, 3 for PoT, 4 for Zero-Shot): ").strip()
+        method_choice = input("Select method (1 for FPP, 2 for CoT, 3 for PoT, 4 for Zero-Shot, 5 for PAL): ").strip()
         if method_choice == '1':
             method = 'fpp'
             solver = FunctionPrototypePrompting()
@@ -79,8 +81,13 @@ def interactive_mode():
             solver = ZeroShotPrompting()
             print("✅ Zero-Shot selected!\n")
             break
+        elif method_choice == '5':
+            method = 'pal'
+            solver = ProgramAidedLanguageModel()
+            print("✅ PAL (Program-aided Language Models) selected!\n")
+            break
         else:
-            print("Please enter 1, 2, 3, or 4")
+            print("Please enter 1, 2, 3, 4, or 5")
     
     while True:
         try:
@@ -99,8 +106,9 @@ def interactive_mode():
                 print("2. CoT (Chain-of-Thought)")
                 print("3. PoT (Program of Thoughts)")
                 print("4. Zero-Shot")
+                print("5. PAL (Program-aided Language Models)")
                 
-                choice = input("Select method (1, 2, 3, or 4): ").strip()
+                choice = input("Select method (1, 2, 3, 4, or 5): ").strip()
                 if choice == '1':
                     method = 'fpp'
                     solver = FunctionPrototypePrompting()
@@ -117,6 +125,10 @@ def interactive_mode():
                     method = 'zero_shot'
                     solver = ZeroShotPrompting()
                     print("🔄 Switched to Zero-Shot")
+                elif choice == '5':
+                    method = 'pal'
+                    solver = ProgramAidedLanguageModel()
+                    print("🔄 Switched to PAL (Program-aided Language Models)")
                 else:
                     print("❌ Invalid choice. Staying with current method.")
                 continue
@@ -155,7 +167,11 @@ def interactive_mode():
                 result = solver.solve(question, context, show_reasoning=True)
                 print(f"✅ Final Answer: {result['result']}")
             
-            else:  # zero_shot
+            elif method == 'zero_shot':
+                result = solver.solve(question, context, show_reasoning=True)
+                print(f"✅ Final Answer: {result['result']}")
+            
+            else:  # pal
                 result = solver.solve(question, context, show_reasoning=True)
                 print(f"✅ Final Answer: {result['result']}")
             
@@ -193,6 +209,11 @@ def print_interactive_help():
 • Simple and fast approach
 • Good baseline for comparison
 
+🧠 PAL (Program-aided Language Models):
+• Combines natural language reasoning with code generation
+• First generates reasoning steps, then writes executable code
+• Best of both worlds: interpretable reasoning + computational accuracy
+
 Examples:
 • "What is 15 + 27?"
 • "John has 25 marbles. He gives 7 to his friend. How many marbles does John have left?"
@@ -210,10 +231,10 @@ def solve_single(method: str, question: str, context: str = "", show_code: bool 
     Solve a single problem using the specified method.
     
     Args:
-        method: 'fpp', 'cot', 'pot', or 'zero_shot'
+        method: 'fpp', 'cot', 'pot', 'zero_shot', or 'pal'
         question: Mathematical question to solve
         context: Optional context information
-        show_code: Whether to display generated code (FPP and PoT)
+        show_code: Whether to display generated code (FPP, PoT, and PAL)
         
     Returns:
         Dictionary with results
@@ -246,8 +267,20 @@ def solve_single(method: str, question: str, context: str = "", show_code: bool 
             result = zs.solve(question, context, show_reasoning=True)
             return result
         
+        elif method.lower() == 'pal':
+            pal = ProgramAidedLanguageModel()
+            result = pal.solve(question, context, show_reasoning=True)
+            
+            if show_code and result.get('code'):
+                print("🐍 Generated Code:")
+                print("-" * 30)
+                print(result['code'])
+                print("-" * 30)
+            
+            return result
+        
         else:
-            raise ValueError(f"Unknown method: {method}. Use 'fpp', 'cot', 'pot', or 'zero_shot'")
+            raise ValueError(f"Unknown method: {method}. Use 'fpp', 'cot', 'pot', 'zero_shot', or 'pal'")
             
     except Exception as e:
         return {
@@ -263,7 +296,7 @@ def test_method(method: str, dataset: str, limit: Optional[int] = None,
     Test a method on a dataset.
     
     Args:
-        method: 'fpp', 'cot', 'pot', or 'zero_shot'
+        method: 'fpp', 'cot', 'pot', 'zero_shot', or 'pal'
         dataset: Dataset name
         limit: Maximum number of samples
         verbose: Show detailed output
@@ -284,8 +317,11 @@ def test_method(method: str, dataset: str, limit: Optional[int] = None,
     elif method.lower() == 'zero_shot':
         solver = create_zero_shot_solver()
         runner = TestRunner('Zero-Shot', solver)
+    elif method.lower() == 'pal':
+        solver = create_pal_solver()
+        runner = TestRunner('PAL', solver)
     else:
-        raise ValueError(f"Unknown method: {method}. Use 'fpp', 'cot', 'pot', or 'zero_shot'")
+        raise ValueError(f"Unknown method: {method}. Use 'fpp', 'cot', 'pot', 'zero_shot', or 'pal'")
     
     return runner.test_dataset(dataset, limit, verbose, output_dir)
 
@@ -336,7 +372,7 @@ def main():
     
     # Single problem solving
     solve_parser = subparsers.add_parser('solve', help='Solve a single problem')
-    solve_parser.add_argument('--method', '-m', choices=['fpp', 'cot', 'pot', 'zero_shot'], required=True,
+    solve_parser.add_argument('--method', '-m', choices=['fpp', 'cot', 'pot', 'zero_shot', 'pal'], required=True,
                              help='Prompting method to use')
     solve_parser.add_argument('--question', '-q', required=True,
                              help='Mathematical question to solve')
@@ -347,7 +383,7 @@ def main():
     
     # Dataset testing
     test_parser = subparsers.add_parser('test', help='Test method on dataset')
-    test_parser.add_argument('--method', '-m', choices=['fpp', 'cot', 'pot', 'zero_shot'], required=True,
+    test_parser.add_argument('--method', '-m', choices=['fpp', 'cot', 'pot', 'zero_shot', 'pal'], required=True,
                             help='Prompting method to use')
     test_parser.add_argument('--dataset', '-d', required=True,
                             help='Dataset to test on')

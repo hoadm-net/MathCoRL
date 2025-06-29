@@ -11,7 +11,7 @@ def read_readme():
     if os.path.exists(readme_path):
         with open(readme_path, 'r', encoding='utf-8') as f:
             return f.read()
-    return "MINT - Mathematical Intelligence Library with FPP, CoT, PoT, and Zero-Shot prompting methods"
+    return "MINT - Mathematical Intelligence Library with FPP, CoT, PoT, Zero-Shot, and PAL prompting methods"
 
 # Read requirements
 def read_requirements():
@@ -23,10 +23,10 @@ def read_requirements():
 
 setup(
     name="mint",
-    version="0.3.0",
+    version="0.4.0",
     author="MathCoRL Team",
     author_email="",
-    description="Mathematical Intelligence Library with FPP, CoT, PoT, and Zero-Shot prompting methods",
+    description="Mathematical Intelligence Library with FPP, CoT, PoT, Zero-Shot, and PAL prompting methods",
     long_description=read_readme(),
     long_description_content_type="text/markdown",
     url="https://github.com/mathcorl/mint",
@@ -56,7 +56,7 @@ setup(
             'mint-fpp=mint.cli:main',
         ],
     },
-    keywords="mathematics, ai, llm, function-prototype-prompting, chain-of-thought, program-of-thoughts, zero-shot, mathematical-reasoning",
+    keywords="mathematics, ai, llm, function-prototype-prompting, chain-of-thought, program-of-thoughts, zero-shot, pal, program-aided-language-models, mathematical-reasoning",
     project_urls={
         "Bug Reports": "https://github.com/mathcorl/mint/issues",
         "Source": "https://github.com/mathcorl/mint",

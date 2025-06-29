@@ -322,4 +322,13 @@ def create_zero_shot_solver():
         from .zero_shot import ZeroShotPrompting
         zs = ZeroShotPrompting()
         return zs.solve_silent(question, context)
-    return solve_zero_shot 
+    return solve_zero_shot
+
+
+def create_pal_solver():
+    """Create PAL (Program-aided Language Models) solver function."""
+    def solve_pal(question: str, context: str = "") -> Dict[str, Any]:
+        from .pal import ProgramAidedLanguageModel
+        pal = ProgramAidedLanguageModel()
+        return pal.solve_silent(question, context)
+    return solve_pal 
