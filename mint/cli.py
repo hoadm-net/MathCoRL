@@ -31,7 +31,8 @@ from typing import Optional, Dict, Any
 
 from .core import FunctionPrototypePrompting
 from .cot import ChainOfThoughtPrompting
-from .testing import TestRunner, DatasetLoader, create_fpp_solver, create_cot_solver
+from .pot import ProgramOfThoughtsPrompting
+from .testing import TestRunner, DatasetLoader, create_fpp_solver, create_cot_solver, create_pot_solver
 from .evaluation import get_tolerance_function
 
 
@@ -48,13 +49,14 @@ def interactive_mode():
     print("🚀 MathCoRL - Interactive Mathematical Problem Solver")
     print("=" * 60)
     print("Choose your method:")
-    print("1. FPP (Function Prototype Prompting) - Code generation")
+    print("1. FPP (Function Prototype Prompting) - Code generation with function prototypes")
     print("2. CoT (Chain-of-Thought) - Step-by-step reasoning")
+    print("3. PoT (Program of Thoughts) - Generate Python code to solve problems")
     print("Type 'exit' to quit, 'help' for help, 'switch' to change method\n")
     
     # Choose initial method
     while True:
-        method_choice = input("Select method (1 for FPP, 2 for CoT): ").strip()
+        method_choice = input("Select method (1 for FPP, 2 for CoT, 3 for PoT): ").strip()
         if method_choice == '1':
             method = 'fpp'
             solver = FunctionPrototypePrompting()
@@ -65,8 +67,13 @@ def interactive_mode():
             solver = ChainOfThoughtPrompting()
             print("✅ CoT (Chain-of-Thought) selected!\n")
             break
+        elif method_choice == '3':
+            method = 'pot'
+            solver = ProgramOfThoughtsPrompting()
+            print("✅ PoT (Program of Thoughts) selected!\n")
+            break
         else:
-            print("Please enter 1 or 2")
+            print("Please enter 1, 2, or 3")
     
     while True:
         try:
@@ -80,14 +87,26 @@ def interactive_mode():
                 print_interactive_help()
                 continue
             elif question.lower() == 'switch':
-                if method == 'fpp':
-                    method = 'cot'
-                    solver = ChainOfThoughtPrompting()
-                    print("🔄 Switched to CoT (Chain-of-Thought)")
-                else:
+                print("Switch to:")
+                print("1. FPP (Function Prototype Prompting)")
+                print("2. CoT (Chain-of-Thought)")
+                print("3. PoT (Program of Thoughts)")
+                
+                choice = input("Select method (1, 2, or 3): ").strip()
+                if choice == '1':
                     method = 'fpp'
                     solver = FunctionPrototypePrompting()
                     print("🔄 Switched to FPP (Function Prototype Prompting)")
+                elif choice == '2':
+                    method = 'cot'
+                    solver = ChainOfThoughtPrompting()
+                    print("🔄 Switched to CoT (Chain-of-Thought)")
+                elif choice == '3':
+                    method = 'pot'
+                    solver = ProgramOfThoughtsPrompting()
+                    print("🔄 Switched to PoT (Program of Thoughts)")
+                else:
+                    print("❌ Invalid choice. Staying with current method.")
                 continue
             elif not question:
                 continue
@@ -116,7 +135,11 @@ def interactive_mode():
                     if result['error']:
                         print(f"Error: {result['error']}")
             
-            else:  # CoT
+            elif method == 'cot':
+                result = solver.solve(question, context, show_reasoning=True)
+                print(f"✅ Final Answer: {result['result']}")
+            
+            else:  # PoT
                 result = solver.solve(question, context, show_reasoning=True)
                 print(f"✅ Final Answer: {result['result']}")
             
@@ -135,7 +158,7 @@ def print_interactive_help():
 📖 Interactive Help - MathCoRL
 
 🔧 FPP (Function Prototype Prompting):
-• Solves problems by generating Python code
+• Solves problems by generating Python code with function prototypes
 • Shows the generated code and result
 • High accuracy for computational problems
 
@@ -143,6 +166,11 @@ def print_interactive_help():
 • Solves problems with step-by-step reasoning
 • Shows detailed reasoning process
 • Good for understanding problem-solving logic
+
+💻 PoT (Program of Thoughts):
+• Generates Python code to solve numerical problems
+• Separates computation from reasoning
+• Excellent for mathematical calculations
 
 Examples:
 • "What is 15 + 27?"
@@ -161,10 +189,10 @@ def solve_single(method: str, question: str, context: str = "", show_code: bool 
     Solve a single problem using the specified method.
     
     Args:
-        method: 'fpp' or 'cot'
+        method: 'fpp', 'cot', or 'pot'
         question: Mathematical question to solve
         context: Optional context information
-        show_code: Whether to display generated code (FPP only)
+        show_code: Whether to display generated code (FPP and PoT)
         
     Returns:
         Dictionary with results
@@ -187,8 +215,13 @@ def solve_single(method: str, question: str, context: str = "", show_code: bool 
             result = cot.solve(question, context, show_reasoning=True)
             return result
         
+        elif method.lower() == 'pot':
+            pot = ProgramOfThoughtsPrompting()
+            result = pot.solve(question, context, show_reasoning=True)
+            return result
+        
         else:
-            raise ValueError(f"Unknown method: {method}. Use 'fpp' or 'cot'")
+            raise ValueError(f"Unknown method: {method}. Use 'fpp', 'cot', or 'pot'")
             
     except Exception as e:
         return {
@@ -204,7 +237,7 @@ def test_method(method: str, dataset: str, limit: Optional[int] = None,
     Test a method on a dataset.
     
     Args:
-        method: 'fpp' or 'cot'
+        method: 'fpp', 'cot', or 'pot'
         dataset: Dataset name
         limit: Maximum number of samples
         verbose: Show detailed output
@@ -219,8 +252,11 @@ def test_method(method: str, dataset: str, limit: Optional[int] = None,
     elif method.lower() == 'cot':
         solver = create_cot_solver()
         runner = TestRunner('CoT', solver)
+    elif method.lower() == 'pot':
+        solver = create_pot_solver()
+        runner = TestRunner('PoT', solver)
     else:
-        raise ValueError(f"Unknown method: {method}. Use 'fpp' or 'cot'")
+        raise ValueError(f"Unknown method: {method}. Use 'fpp', 'cot', or 'pot'")
     
     return runner.test_dataset(dataset, limit, verbose, output_dir)
 
@@ -271,18 +307,18 @@ def main():
     
     # Single problem solving
     solve_parser = subparsers.add_parser('solve', help='Solve a single problem')
-    solve_parser.add_argument('--method', '-m', choices=['fpp', 'cot'], required=True,
+    solve_parser.add_argument('--method', '-m', choices=['fpp', 'cot', 'pot'], required=True,
                              help='Prompting method to use')
     solve_parser.add_argument('--question', '-q', required=True,
                              help='Mathematical question to solve')
     solve_parser.add_argument('--context', '-c', default='',
                              help='Optional context for the problem')
     solve_parser.add_argument('--no-code', action='store_true',
-                             help='Hide generated code (FPP only)')
+                             help='Hide generated code (FPP and PoT)')
     
     # Dataset testing
     test_parser = subparsers.add_parser('test', help='Test method on dataset')
-    test_parser.add_argument('--method', '-m', choices=['fpp', 'cot'], required=True,
+    test_parser.add_argument('--method', '-m', choices=['fpp', 'cot', 'pot'], required=True,
                             help='Prompting method to use')
     test_parser.add_argument('--dataset', '-d', required=True,
                             help='Dataset to test on')

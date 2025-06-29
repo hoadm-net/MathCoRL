@@ -304,4 +304,13 @@ def create_cot_solver():
         from .cot import ChainOfThoughtPrompting
         cot = ChainOfThoughtPrompting()
         return cot.solve_silent(question, context)
-    return solve_cot 
+    return solve_cot
+
+
+def create_pot_solver():
+    """Create PoT (Program of Thoughts) solver function."""
+    def solve_pot(question: str, context: str = "") -> Dict[str, Any]:
+        from .pot import ProgramOfThoughtsPrompting
+        pot = ProgramOfThoughtsPrompting()
+        return pot.solve_silent(question, context)
+    return solve_pot 

@@ -14,9 +14,14 @@ The MathCoRL project has been significantly refactored to eliminate code duplica
 
 2. **Unified Testing Framework**: 
    - Single `mint.testing` module for all testing needs
-   - Consistent interface for both FPP and CoT methods
+   - Consistent interface for FPP, CoT, and PoT methods
 
-3. **Shared Evaluation Library**: 
+3. **Added Program of Thoughts (PoT)**: 
+   - New `mint.pot` module implementing PoT prompting
+   - Generates Python code to solve numerical problems
+   - Separates computation from reasoning for better accuracy
+
+4. **Shared Evaluation Library**: 
    - Centralized `mint.evaluation` module with all tolerance functions
    - Dataset-specific evaluation logic properly modularized
 
@@ -48,6 +53,7 @@ python cot.py --question "What is 15 + 27?"
 # Unified interface
 python mathcorl.py solve --method fpp --question "What is 15 + 27?"
 python mathcorl.py solve --method cot --question "What is 15 + 27?"
+python mathcorl.py solve --method pot --question "What is 15 + 27?"
 
 # Or use the new interactive mode
 python mathcorl.py interactive
@@ -69,6 +75,7 @@ python cot_prompting.py SVAMP --limit 50
 # Unified testing interface
 python mathcorl.py test --method fpp --dataset SVAMP --limit 50
 python mathcorl.py test --method cot --dataset SVAMP --limit 50
+python mathcorl.py test --method pot --dataset SVAMP --limit 50
 
 # New: Compare methods directly
 python mathcorl.py compare --dataset SVAMP --limit 50
@@ -98,12 +105,13 @@ from cot_prompting import solve_single_cot, is_close_tatqa
 #### **After (Unified API)**
 ```python
 # New way - clean, unified API
-from mint.testing import TestRunner, create_fpp_solver, create_cot_solver
+from mint.testing import TestRunner, create_fpp_solver, create_cot_solver, create_pot_solver
 from mint.evaluation import get_tolerance_function, calculate_accuracy
 
 # Create test runners
 fpp_runner = TestRunner('FPP', create_fpp_solver())
 cot_runner = TestRunner('CoT', create_cot_solver())
+pot_runner = TestRunner('PoT', create_pot_solver())
 
 # Run tests
 results = fpp_runner.test_dataset('SVAMP', limit=50)
@@ -117,10 +125,12 @@ comparison = fpp_runner.compare_methods(cot_runner, 'SVAMP', limit=20)
 ```
 MathCoRL/
 ├── mathcorl.py              # 🆕 Unified entry point (replaces 4 scripts)
+├── pot.py                   # 🆕 Legacy PoT script (backward compatibility)
 ├── mint/
 │   ├── __init__.py          # ✅ Updated exports
 │   ├── core.py              # ✅ FPP implementation (unchanged)
 │   ├── cot.py               # ✅ CoT implementation (unchanged)
+│   ├── pot.py               # 🆕 Program of Thoughts implementation
 │   ├── evaluation.py        # 🆕 Unified evaluation & tolerance functions
 │   ├── testing.py           # 🆕 Unified testing framework
 │   ├── cli.py               # ✅ Enhanced CLI interface
@@ -151,7 +161,7 @@ rm cot_prompting.py
 ### 1. **Interactive Mode**
 ```bash
 python mathcorl.py interactive
-# Choose between FPP and CoT interactively
+# Choose between FPP, CoT, and PoT interactively
 # Switch methods on the fly
 ```
 
@@ -159,6 +169,7 @@ python mathcorl.py interactive
 ```bash
 python mathcorl.py compare --dataset SVAMP --limit 20
 # Automatically runs both FPP and CoT and compares results
+# PoT can also be tested individually
 ```
 
 ### 3. **Better Result Tracking**
@@ -193,9 +204,11 @@ python mathcorl.py
 
 # Test single solve
 python mathcorl.py solve --method fpp --question "What is 15 + 27?"
+python mathcorl.py solve --method pot --question "What is 15 + 27?"
 
 # Test dataset testing
 python mathcorl.py test --method fpp --dataset SVAMP --limit 5
+python mathcorl.py test --method pot --dataset SVAMP --limit 5
 
 # Test comparison
 python mathcorl.py compare --dataset SVAMP --limit 5

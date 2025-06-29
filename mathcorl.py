@@ -87,7 +87,7 @@ def main():
             parser.add_argument('--limit', type=int)
             parser.add_argument('--verbose', '-v', action='store_true')
             parser.add_argument('--output', default='results')
-            parser.add_argument('--method', default='fpp', choices=['fpp', 'cot'])
+            parser.add_argument('--method', default='fpp', choices=['fpp', 'cot', 'pot'])
             
             args = parser.parse_args()
             legacy_dataset_testing(args.method, dataset, args)
@@ -120,14 +120,14 @@ def main():
         
         # Solve command
         solve_parser = subparsers.add_parser('solve', help='Solve a single problem')
-        solve_parser.add_argument('--method', '-m', choices=['fpp', 'cot'], required=True)
+        solve_parser.add_argument('--method', '-m', choices=['fpp', 'cot', 'pot'], required=True)
         solve_parser.add_argument('question')
         solve_parser.add_argument('--context', '-c', default='')
         solve_parser.add_argument('--no-code', action='store_true')
         
         # Test command  
         test_parser = subparsers.add_parser('test', help='Test on dataset')
-        test_parser.add_argument('method', choices=['fpp', 'cot'])
+        test_parser.add_argument('method', choices=['fpp', 'cot', 'pot'])
         test_parser.add_argument('dataset')
         test_parser.add_argument('--limit', type=int)
         test_parser.add_argument('--verbose', '-v', action='store_true')
