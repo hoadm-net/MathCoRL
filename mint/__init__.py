@@ -2,12 +2,13 @@
 MINT - Mathematical Intelligence Library
 
 A library for mathematical problem solving using Function Prototype Prompting (FPP),
-Chain-of-Thought (CoT), and Program of Thoughts (PoT) prompting methods.
+Chain-of-Thought (CoT), Program of Thoughts (PoT), and Zero-Shot prompting methods.
 """
 
 from .core import FunctionPrototypePrompting, solve_math_problem
 from .cot import ChainOfThoughtPrompting, solve_with_cot
 from .pot import ProgramOfThoughtsPrompting, solve_with_pot
+from .zero_shot import ZeroShotPrompting, solve_with_zero_shot
 from .functions import get_execution_namespace
 from .prompts import create_fpp_prompt, create_problem_prompt, load_function_prototypes, load_fpp_template
 from .utils import load_svamp_dataset, clean_code, execute_code, evaluate_result
@@ -18,9 +19,9 @@ from .evaluation import (
     is_close, is_close_tatqa, is_close_finqa, get_tolerance_function,
     calculate_accuracy, evaluate_predictions
 )
-from .testing import TestRunner, DatasetLoader, create_fpp_solver, create_cot_solver, create_pot_solver
+from .testing import TestRunner, DatasetLoader, create_fpp_solver, create_cot_solver, create_pot_solver, create_zero_shot_solver
 
-__version__ = "0.2.0"
+__version__ = "0.3.0"
 __author__ = "MathCoRL Team"
 
 __all__ = [
@@ -31,6 +32,8 @@ __all__ = [
     "solve_with_cot",
     "ProgramOfThoughtsPrompting",
     "solve_with_pot",
+    "ZeroShotPrompting",
+    "solve_with_zero_shot",
     
     # Function utilities
     "get_execution_namespace",
@@ -61,5 +64,6 @@ __all__ = [
     "DatasetLoader",
     "create_fpp_solver",
     "create_cot_solver",
-    "create_pot_solver"
+    "create_pot_solver",
+    "create_zero_shot_solver"
 ]

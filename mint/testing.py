@@ -313,4 +313,13 @@ def create_pot_solver():
         from .pot import ProgramOfThoughtsPrompting
         pot = ProgramOfThoughtsPrompting()
         return pot.solve_silent(question, context)
-    return solve_pot 
+    return solve_pot
+
+
+def create_zero_shot_solver():
+    """Create Zero-Shot solver function."""
+    def solve_zero_shot(question: str, context: str = "") -> Dict[str, Any]:
+        from .zero_shot import ZeroShotPrompting
+        zs = ZeroShotPrompting()
+        return zs.solve_silent(question, context)
+    return solve_zero_shot 

@@ -32,7 +32,8 @@ from typing import Optional, Dict, Any
 from .core import FunctionPrototypePrompting
 from .cot import ChainOfThoughtPrompting
 from .pot import ProgramOfThoughtsPrompting
-from .testing import TestRunner, DatasetLoader, create_fpp_solver, create_cot_solver, create_pot_solver
+from .zero_shot import ZeroShotPrompting
+from .testing import TestRunner, DatasetLoader, create_fpp_solver, create_cot_solver, create_pot_solver, create_zero_shot_solver
 from .evaluation import get_tolerance_function
 
 
@@ -52,11 +53,12 @@ def interactive_mode():
     print("1. FPP (Function Prototype Prompting) - Code generation with function prototypes")
     print("2. CoT (Chain-of-Thought) - Step-by-step reasoning")
     print("3. PoT (Program of Thoughts) - Generate Python code to solve problems")
+    print("4. Zero-Shot - Direct problem solving without examples")
     print("Type 'exit' to quit, 'help' for help, 'switch' to change method\n")
     
     # Choose initial method
     while True:
-        method_choice = input("Select method (1 for FPP, 2 for CoT, 3 for PoT): ").strip()
+        method_choice = input("Select method (1 for FPP, 2 for CoT, 3 for PoT, 4 for Zero-Shot): ").strip()
         if method_choice == '1':
             method = 'fpp'
             solver = FunctionPrototypePrompting()
@@ -72,8 +74,13 @@ def interactive_mode():
             solver = ProgramOfThoughtsPrompting()
             print("✅ PoT (Program of Thoughts) selected!\n")
             break
+        elif method_choice == '4':
+            method = 'zero_shot'
+            solver = ZeroShotPrompting()
+            print("✅ Zero-Shot selected!\n")
+            break
         else:
-            print("Please enter 1, 2, or 3")
+            print("Please enter 1, 2, 3, or 4")
     
     while True:
         try:
@@ -91,8 +98,9 @@ def interactive_mode():
                 print("1. FPP (Function Prototype Prompting)")
                 print("2. CoT (Chain-of-Thought)")
                 print("3. PoT (Program of Thoughts)")
+                print("4. Zero-Shot")
                 
-                choice = input("Select method (1, 2, or 3): ").strip()
+                choice = input("Select method (1, 2, 3, or 4): ").strip()
                 if choice == '1':
                     method = 'fpp'
                     solver = FunctionPrototypePrompting()
@@ -105,6 +113,10 @@ def interactive_mode():
                     method = 'pot'
                     solver = ProgramOfThoughtsPrompting()
                     print("🔄 Switched to PoT (Program of Thoughts)")
+                elif choice == '4':
+                    method = 'zero_shot'
+                    solver = ZeroShotPrompting()
+                    print("🔄 Switched to Zero-Shot")
                 else:
                     print("❌ Invalid choice. Staying with current method.")
                 continue
@@ -139,7 +151,11 @@ def interactive_mode():
                 result = solver.solve(question, context, show_reasoning=True)
                 print(f"✅ Final Answer: {result['result']}")
             
-            else:  # PoT
+            elif method == 'pot':
+                result = solver.solve(question, context, show_reasoning=True)
+                print(f"✅ Final Answer: {result['result']}")
+            
+            else:  # zero_shot
                 result = solver.solve(question, context, show_reasoning=True)
                 print(f"✅ Final Answer: {result['result']}")
             
@@ -172,6 +188,11 @@ def print_interactive_help():
 • Separates computation from reasoning
 • Excellent for mathematical calculations
 
+🎯 Zero-Shot:
+• Direct problem solving without examples or step-by-step guidance
+• Simple and fast approach
+• Good baseline for comparison
+
 Examples:
 • "What is 15 + 27?"
 • "John has 25 marbles. He gives 7 to his friend. How many marbles does John have left?"
@@ -189,7 +210,7 @@ def solve_single(method: str, question: str, context: str = "", show_code: bool 
     Solve a single problem using the specified method.
     
     Args:
-        method: 'fpp', 'cot', or 'pot'
+        method: 'fpp', 'cot', 'pot', or 'zero_shot'
         question: Mathematical question to solve
         context: Optional context information
         show_code: Whether to display generated code (FPP and PoT)
@@ -220,8 +241,13 @@ def solve_single(method: str, question: str, context: str = "", show_code: bool 
             result = pot.solve(question, context, show_reasoning=True)
             return result
         
+        elif method.lower() == 'zero_shot':
+            zs = ZeroShotPrompting()
+            result = zs.solve(question, context, show_reasoning=True)
+            return result
+        
         else:
-            raise ValueError(f"Unknown method: {method}. Use 'fpp', 'cot', or 'pot'")
+            raise ValueError(f"Unknown method: {method}. Use 'fpp', 'cot', 'pot', or 'zero_shot'")
             
     except Exception as e:
         return {
@@ -237,7 +263,7 @@ def test_method(method: str, dataset: str, limit: Optional[int] = None,
     Test a method on a dataset.
     
     Args:
-        method: 'fpp', 'cot', or 'pot'
+        method: 'fpp', 'cot', 'pot', or 'zero_shot'
         dataset: Dataset name
         limit: Maximum number of samples
         verbose: Show detailed output
@@ -255,8 +281,11 @@ def test_method(method: str, dataset: str, limit: Optional[int] = None,
     elif method.lower() == 'pot':
         solver = create_pot_solver()
         runner = TestRunner('PoT', solver)
+    elif method.lower() == 'zero_shot':
+        solver = create_zero_shot_solver()
+        runner = TestRunner('Zero-Shot', solver)
     else:
-        raise ValueError(f"Unknown method: {method}. Use 'fpp', 'cot', or 'pot'")
+        raise ValueError(f"Unknown method: {method}. Use 'fpp', 'cot', 'pot', or 'zero_shot'")
     
     return runner.test_dataset(dataset, limit, verbose, output_dir)
 
@@ -307,7 +336,7 @@ def main():
     
     # Single problem solving
     solve_parser = subparsers.add_parser('solve', help='Solve a single problem')
-    solve_parser.add_argument('--method', '-m', choices=['fpp', 'cot', 'pot'], required=True,
+    solve_parser.add_argument('--method', '-m', choices=['fpp', 'cot', 'pot', 'zero_shot'], required=True,
                              help='Prompting method to use')
     solve_parser.add_argument('--question', '-q', required=True,
                              help='Mathematical question to solve')
@@ -318,7 +347,7 @@ def main():
     
     # Dataset testing
     test_parser = subparsers.add_parser('test', help='Test method on dataset')
-    test_parser.add_argument('--method', '-m', choices=['fpp', 'cot', 'pot'], required=True,
+    test_parser.add_argument('--method', '-m', choices=['fpp', 'cot', 'pot', 'zero_shot'], required=True,
                             help='Prompting method to use')
     test_parser.add_argument('--dataset', '-d', required=True,
                             help='Dataset to test on')
