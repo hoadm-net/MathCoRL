@@ -53,12 +53,6 @@ python mathcorl.py solve --method cot --question "John has 20 apples. He gives 8
 python mathcorl.py solve --method pot --question "Calculate the average of 10, 20, 30"
 python mathcorl.py solve --method zero_shot --question "What is 5 * 6?"
 python mathcorl.py solve --method pal --question "A pizza is cut into 8 slices. If 3 are eaten, how many remain?"
-
-# Using legacy scripts (for backward compatibility)
-python cot.py --question "What is 15 + 27?"
-python pot.py "What is 15 + 27?"
-python zero_shot.py "What is 15 + 27?"
-python pal.py "What is 15 + 27?"
 ```
 
 #### Interactive Mode
@@ -214,10 +208,6 @@ MathCoRL/
 │   ├── evaluation.py       # Evaluation metrics
 │   └── utils.py            # Utility functions
 ├── mathcorl.py             # Main unified interface
-├── cot.py                  # Legacy CoT script
-├── pot.py                  # Legacy PoT script
-├── zero_shot.py            # Legacy Zero-Shot script
-├── pal.py                  # Legacy PAL script
 └── datasets/               # Test datasets
 ```
 
@@ -234,20 +224,6 @@ MAX_TOKENS=1000
 # OpenAI API
 OPENAI_API_KEY=your_key_here
 ```
-
-## 📈 Performance
-
-### Accuracy Comparison (SVAMP Dataset)
-
-| Method | Accuracy | Reasoning Quality | Code Quality |
-|--------|----------|------------------|-------------|
-| FPP | **95.2%** | High | High |
-| PAL | 92.8% | High | Medium |
-| PoT | 90.5% | Low | High |
-| CoT | 87.3% | High | N/A |
-| Zero-Shot | 73.1% | Low | N/A |
-
-*Results on SVAMP test set (100 samples)*
 
 ## 🔧 API Reference
 
@@ -338,28 +314,3 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## 🤝 Contributing
 
 We welcome contributions! Please see our contributing guidelines for details.
-
-## 📞 Contact
-
-For questions and support:
-- Create an issue on GitHub
-- Contact the MathCoRL team
-
-## 🎓 Citation
-
-If you use this library in your research, please cite:
-
-```bibtex
-@article{mathcorl2025,
-  title={MathCoRL: A Unified Framework for Mathematical Reasoning with Large Language Models},
-  author={MathCoRL Team},
-  year={2025}
-}
-```
-
-## 🚀 Version History
-
-- **0.4.0** - Added PAL (Program-aided Language Models) method
-- **0.3.0** - Added Zero-Shot prompting method  
-- **0.2.0** - Added PoT (Program of Thoughts) method
-- **0.1.0** - Initial release with FPP and CoT methods 
