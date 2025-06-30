@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Generic Comparison Study: FPP vs FPP+Random vs FPP+Policy Network
+Generic Comparison Study: FPP vs FPP+Random vs FPP+Policy Network vs FPP+KATE
 
 This script can work with any dataset by passing the dataset name as parameter.
 Usage: python comparison_study_generic.py --dataset GSM8K --samples 10
@@ -14,6 +14,8 @@ from typing import Dict, List, Tuple, Any
 from pathlib import Path
 import sys
 from datetime import datetime
+import numpy as np
+from sklearn.metrics.pairwise import cosine_similarity
 
 # Add project root to path
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
@@ -169,6 +171,45 @@ class GenericComparisonStudy:
             print(f"⚠️ Policy Network loading failed: {e}")
             return None
 
+    def _select_kate_examples(self, sample: Dict) -> List[Dict]:
+        """
+        KATE (kNN-Augmented in-conText Example selection) method.
+        Selects k most similar examples based on embedding cosine similarity.
+        
+        Args:
+            sample: Test sample with question and context
+            
+        Returns:
+            List of k most similar candidate examples
+        """
+        try:
+            # Create embedding for test sample using same format as candidates
+            test_embedding = create_standardized_embedding(sample['question'], sample.get('context', ''))
+            
+            if not test_embedding:
+                print("⚠️ Failed to create test embedding")
+                return random.sample(self.candidates, min(self.k, len(self.candidates)))
+            
+            # Convert to numpy arrays for efficient computation
+            test_emb = np.array(test_embedding).reshape(1, -1)
+            candidate_embeddings = np.array([c['embedding'] for c in self.candidates])
+            
+            # Compute cosine similarities
+            similarities = cosine_similarity(test_emb, candidate_embeddings)[0]
+            
+            # Get indices of top-k most similar candidates
+            top_k_indices = np.argsort(similarities)[-self.k:][::-1]  # Descending order
+            
+            # Select top-k candidates
+            selected_examples = [self.candidates[i] for i in top_k_indices]
+            
+            return selected_examples
+            
+        except Exception as e:
+            print(f"⚠️ KATE selection failed: {e}")
+            # Fallback to random selection
+            return random.sample(self.candidates, min(self.k, len(self.candidates)))
+
     def test_zero_shot_fpp(self, sample: Dict) -> Tuple[bool, Any]:
         """Test FPP zero-shot using official implementation."""
         try:
@@ -198,7 +239,7 @@ class GenericComparisonStudy:
             prompt = create_fpp_with_examples_prompt(
                 question=sample['question'],
                 examples=random_examples,
-                context=sample['context']
+                context=sample.get('context', '')
             )
             
             # Use official FPP instance
@@ -219,9 +260,49 @@ class GenericComparisonStudy:
                 return is_correct, result
             else:
                 return False, None
-                
+            
         except Exception as e:
             print(f"❌ Random FPP error: {e}")
+            return False, None
+
+    def test_fpp_with_kate_examples(self, sample: Dict) -> Tuple[bool, Any]:
+        """Test FPP with KATE (kNN) selected examples."""
+        try:
+            if len(self.candidates) < self.k:
+                print(f"⚠️ Not enough candidates ({len(self.candidates)} < {self.k})")
+                return False, None
+            
+            # Use KATE to select examples
+            kate_examples = self._select_kate_examples(sample)
+            
+            # Create prompt with KATE examples
+            prompt = create_fpp_with_examples_prompt(
+                question=sample['question'],
+                examples=kate_examples,
+                context=sample.get('context', '')
+            )
+            
+            # Use official FPP instance
+            response = self.fpp_instance._call_llm(prompt)
+            if not response:
+                return False, None
+            
+            # Clean and execute code
+            from mint.utils import clean_code, execute_code
+            cleaned_code = clean_code(response)
+            result, error = execute_code(cleaned_code)
+            
+            if error:
+                return False, None
+            
+            if result is not None:
+                is_correct = self.tolerance_func(result, sample['ground_truth'])
+                return is_correct, result
+            else:
+                return False, None
+            
+        except Exception as e:
+            print(f"❌ KATE FPP error: {e}")
             return False, None
 
     def test_fpp_with_policy_examples(self, sample: Dict) -> Tuple[bool, Any]:
@@ -233,8 +314,7 @@ class GenericComparisonStudy:
             # Create embedding for test sample using standardized function
             test_embedding = create_standardized_embedding(
                 context=sample['context'], 
-                question=sample['question'],
-                openai_client=OpenAI(api_key=self.fpp_instance.api_key)
+                question=sample['question']
             )
             
             # Create problem dict
@@ -289,10 +369,14 @@ class GenericComparisonStudy:
             print(f"❌ Policy FPP error: {e}")
             return False, None
 
-    def run_comparison(self, n_samples: int = 10) -> Dict[str, Any]:
+    def run_comparison(self, n_samples: int = 10, methods: List[str] = None) -> Dict[str, Any]:
         """Run comparison study on dataset samples."""
+        if methods is None:
+            methods = ['zero-shot', 'random', 'policy', 'kate']
+        
         print(f"\n🚀 Starting {self.dataset_name} Comparison Study")
         print(f"📊 Testing {n_samples} samples")
+        print(f"🔧 Methods: {', '.join(methods)}")
         print("=" * 50)
         
         # Load test data
@@ -301,100 +385,148 @@ class GenericComparisonStudy:
         
         print(f"✅ Loaded {len(test_samples)} test samples")
         
-        # Results tracking
-        results = {
-            'zero_shot': {'correct': 0, 'total': 0, 'details': []},
-            'random_examples': {'correct': 0, 'total': 0, 'details': []},
-            'policy_examples': {'correct': 0, 'total': 0, 'details': []}
-        }
+        # Results tracking - initialize only for selected methods
+        results = {}
+        if 'zero-shot' in methods:
+            results['zero_shot'] = {'correct': 0, 'total': 0, 'details': []}
+        if 'random' in methods:
+            results['random_examples'] = {'correct': 0, 'total': 0, 'details': []}
+        if 'policy' in methods:
+            results['policy_examples'] = {'correct': 0, 'total': 0, 'details': []}
+        if 'kate' in methods:
+            results['kate_examples'] = {'correct': 0, 'total': 0, 'details': []}
         
         for i, sample in enumerate(test_samples):
             print(f"\n📝 Sample {i+1}/{len(test_samples)}")
             print(f"Question: {sample['question'][:80]}...")
             print(f"Ground Truth: {sample['ground_truth']}")
             
-            # Test 1: Zero-shot FPP
-            print("  🎯 Testing Zero-shot FPP...")
-            success1, result1 = self.test_zero_shot_fpp(sample)
-            results['zero_shot']['total'] += 1
-            if success1:
-                results['zero_shot']['correct'] += 1
-            results['zero_shot']['details'].append({
-                'sample_id': i,
-                'correct': success1,
-                'predicted': result1,
-                'ground_truth': sample['ground_truth']
-            })
-            print(f"    Result: {result1} ({'✅' if success1 else '❌'})")
-            
-            # Test 2: FPP + Random examples
-            print("  🎲 Testing FPP + Random examples...")
-            success2, result2 = self.test_fpp_with_random_examples(sample)
-            results['random_examples']['total'] += 1
-            if success2:
-                results['random_examples']['correct'] += 1
-            results['random_examples']['details'].append({
-                'sample_id': i,
-                'correct': success2,
-                'predicted': result2,
-                'ground_truth': sample['ground_truth']
-            })
-            print(f"    Result: {result2} ({'✅' if success2 else '❌'})")
-            
-            # Test 3: FPP + Policy Network (if available)
-            if self.policy_network:
-                print("  🤖 Testing FPP + Policy Network...")
-                success3, result3 = self.test_fpp_with_policy_examples(sample)
-                results['policy_examples']['total'] += 1
-                if success3:
-                    results['policy_examples']['correct'] += 1
-                results['policy_examples']['details'].append({
+            # Test 1: Zero-shot FPP (only if selected)
+            if 'zero-shot' in methods:
+                print("  🎯 Testing Zero-shot FPP...")
+                success1, result1 = self.test_zero_shot_fpp(sample)
+                results['zero_shot']['total'] += 1
+                if success1:
+                    results['zero_shot']['correct'] += 1
+                results['zero_shot']['details'].append({
                     'sample_id': i,
-                    'correct': success3,
-                    'predicted': result3,
+                    'correct': success1,
+                    'predicted': result1,
                     'ground_truth': sample['ground_truth']
                 })
-                print(f"    Result: {result3} ({'✅' if success3 else '❌'})")
-            else:
-                print("  ⚠️ Policy Network not available - skipping")
-                results['policy_examples']['details'].append({
+                print(f"    Result: {result1} ({'✅' if success1 else '❌'})")
+            
+            # Test 2: FPP + Random examples (only if selected)
+            if 'random' in methods:
+                print("  🎲 Testing FPP + Random examples...")
+                success2, result2 = self.test_fpp_with_random_examples(sample)
+                results['random_examples']['total'] += 1
+                if success2:
+                    results['random_examples']['correct'] += 1
+                results['random_examples']['details'].append({
                     'sample_id': i,
-                    'correct': False,
-                    'predicted': None,
+                    'correct': success2,
+                    'predicted': result2,
                     'ground_truth': sample['ground_truth']
                 })
+                print(f"    Result: {result2} ({'✅' if success2 else '❌'})")
+            
+            # Test 3: FPP + Policy Network (only if selected and available)
+            if 'policy' in methods:
+                if self.policy_network:
+                    print("  🤖 Testing FPP + Policy Network...")
+                    success3, result3 = self.test_fpp_with_policy_examples(sample)
+                    results['policy_examples']['total'] += 1
+                    if success3:
+                        results['policy_examples']['correct'] += 1
+                    results['policy_examples']['details'].append({
+                        'sample_id': i,
+                        'correct': success3,
+                        'predicted': result3,
+                        'ground_truth': sample['ground_truth']
+                    })
+                    print(f"    Result: {result3} ({'✅' if success3 else '❌'})")
+                else:
+                    print("  ⚠️ Policy Network not available - skipping")
+                    results['policy_examples']['details'].append({
+                        'sample_id': i,
+                        'correct': False,
+                        'predicted': None,
+                        'ground_truth': sample['ground_truth']
+                    })
+            
+            # Test 4: FPP + KATE examples (only if selected)
+            if 'kate' in methods:
+                print("  🔍 Testing FPP + KATE examples...")
+                success4, result4 = self.test_fpp_with_kate_examples(sample)
+                results['kate_examples']['total'] += 1
+                if success4:
+                    results['kate_examples']['correct'] += 1
+                results['kate_examples']['details'].append({
+                    'sample_id': i,
+                    'correct': success4,
+                    'predicted': result4,
+                    'ground_truth': sample['ground_truth']
+                })
+                print(f"    Result: {result4} ({'✅' if success4 else '❌'})")
             
             print("-" * 30)
         
-        # Calculate final accuracies
-        zero_shot_acc = (results['zero_shot']['correct'] / results['zero_shot']['total']) * 100 if results['zero_shot']['total'] > 0 else 0
-        random_acc = (results['random_examples']['correct'] / results['random_examples']['total']) * 100 if results['random_examples']['total'] > 0 else 0
-        policy_acc = (results['policy_examples']['correct'] / results['policy_examples']['total']) * 100 if results['policy_examples']['total'] > 0 else 0
+        # Calculate final accuracies (only for selected methods)
+        zero_shot_acc = None
+        random_acc = None
+        policy_acc = None
+        kate_acc = None
+        
+        if 'zero-shot' in methods and results['zero_shot']['total'] > 0:
+            zero_shot_acc = (results['zero_shot']['correct'] / results['zero_shot']['total']) * 100
+        
+        if 'random' in methods and results['random_examples']['total'] > 0:
+            random_acc = (results['random_examples']['correct'] / results['random_examples']['total']) * 100
+        
+        if 'policy' in methods and results['policy_examples']['total'] > 0:
+            policy_acc = (results['policy_examples']['correct'] / results['policy_examples']['total']) * 100
+        
+        if 'kate' in methods and results['kate_examples']['total'] > 0:
+            kate_acc = (results['kate_examples']['correct'] / results['kate_examples']['total']) * 100
         
         print(f"\n🏆 FINAL RESULTS - {self.dataset_name}")
         print("=" * 50)
-        print(f"Zero-shot FPP:      {zero_shot_acc:.1f}% ({results['zero_shot']['correct']}/{results['zero_shot']['total']})")
-        print(f"FPP + Random:       {random_acc:.1f}% ({results['random_examples']['correct']}/{results['random_examples']['total']})")
-        if self.policy_network:
+        
+        if zero_shot_acc is not None:
+            print(f"Zero-shot FPP:      {zero_shot_acc:.1f}% ({results['zero_shot']['correct']}/{results['zero_shot']['total']})")
+        if random_acc is not None:
+            print(f"FPP + Random:       {random_acc:.1f}% ({results['random_examples']['correct']}/{results['random_examples']['total']})")
+        if policy_acc is not None:
             print(f"FPP + Policy Net:   {policy_acc:.1f}% ({results['policy_examples']['correct']}/{results['policy_examples']['total']})")
-        else:
+        elif 'policy' in methods:
             print(f"FPP + Policy Net:   N/A (model not found)")
+        if kate_acc is not None:
+            print(f"FPP + KATE:         {kate_acc:.1f}% ({results['kate_examples']['correct']}/{results['kate_examples']['total']})")
         
-        # Determine winner
-        methods = [('Zero-shot FPP', zero_shot_acc), ('FPP + Random', random_acc)]
-        if self.policy_network:
-            methods.append(('FPP + Policy Network', policy_acc))
+        # Determine winner (only among selected methods)
+        method_scores = []
+        if zero_shot_acc is not None:
+            method_scores.append(('Zero-shot FPP', zero_shot_acc))
+        if random_acc is not None:
+            method_scores.append(('FPP + Random', random_acc))
+        if policy_acc is not None:
+            method_scores.append(('FPP + Policy Network', policy_acc))
+        if kate_acc is not None:
+            method_scores.append(('FPP + KATE', kate_acc))
         
-        best_method = max(methods, key=lambda x: x[1])
+        best_method = max(method_scores, key=lambda x: x[1]) if method_scores else ('N/A', 0.0)
         print(f"\n🥇 Best Method: {best_method[0]} ({best_method[1]:.1f}%)")
         
         summary = {
             'dataset': self.dataset_name,
             'n_samples': n_samples,
+            'methods': methods,
             'accuracies': {
                 'zero_shot_fpp': zero_shot_acc,
                 'fpp_random': random_acc,
-                'fpp_policy': policy_acc if self.policy_network else None
+                'fpp_policy': policy_acc,
+                'fpp_kate': kate_acc
             },
             'detailed_results': results,
             'best_method': best_method[0],

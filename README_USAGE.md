@@ -120,20 +120,38 @@ python train_policy.py --dataset GSM8K --epochs 3 --lr 3e-4
 
 ## 🏆 Step 3: Run Comparison
 
-Compare the three approaches on test samples to evaluate Policy Network effectiveness.
+Compare four approaches on test samples to evaluate different example selection strategies.
 
 ### Basic Usage
 ```bash
-# Compare methods on 10 samples
+# Compare all methods on 10 samples
 python run_comparison.py --dataset FinQA --samples 10
 
 # Save detailed results to JSON
 python run_comparison.py --dataset GSM8K --samples 20 --save-results
 ```
 
+### Method Selection
+Select specific methods to compare using `--methods` parameter:
+
+```bash
+# Compare only Policy Network vs KATE
+python run_comparison.py --dataset FinQA --methods policy,kate --samples 10
+
+# Compare baseline vs Policy Network  
+python run_comparison.py --dataset GSM8K --methods zero-shot,policy --samples 15
+
+# Test only KATE method
+python run_comparison.py --dataset SVAMP --methods kate --samples 5
+
+# Compare traditional methods (no AI selection)
+python run_comparison.py --dataset TabMWP --methods zero-shot,random --samples 10
+```
+
 ### Options
 - `--dataset, -d`: Dataset to test on (required)
 - `--samples, -s`: Number of test samples (default: 10)
+- `--methods`: Comma-separated methods to compare (default: zero-shot,random,policy,kate)
 - `--seed`: Random seed for reproducibility (default: 42)
 - `--save-results`: Save detailed JSON results
 - `--skip-policy`: Skip Policy Network method if model unavailable
@@ -154,8 +172,13 @@ python run_comparison.py --dataset GSM8K --samples 20 --save-results
 
 #### 3. 🤖 FPP + Policy Network
 - **Description**: FPP with policy-selected relevant examples
-- **Usage**: Main method using trained neural network for example selection
+- **Usage**: AI-powered method using trained neural network for example selection
 - **Implementation**: Policy network selects most relevant examples based on embeddings
+
+#### 4. 🔍 FPP + KATE
+- **Description**: FPP with kNN-Augmented in-conText Example selection
+- **Usage**: Similarity-based method using semantic similarity for example selection
+- **Implementation**: Cosine similarity between problem and candidate embeddings
 
 ### Output Format
 ```
@@ -168,9 +191,13 @@ Best method: [BEST_METHOD] (X.X%)
 🎯 Zero-shot FPP      : X.X%
 🎲 FPP + Random       : X.X%
 🤖 FPP + Policy Net   : X.X%
+🔍 FPP + KATE         : X.X%
 ============================================================
 📈 Policy Network improvement: ±X.X% over zero-shot
+📈 KATE improvement: ±X.X% over zero-shot
 ```
+
+**Note**: Only selected methods (via `--methods`) will be displayed in results.
 
 ## 🧪 Pipeline Testing
 
@@ -249,6 +276,9 @@ MathCoRL/
 python generate_candidates.py --dataset FinQA --n-candidates 100
 python train_policy.py --dataset FinQA --epochs 5
 python run_comparison.py --dataset FinQA --samples 10 --save-results
+
+# Compare only AI methods (Policy Network vs KATE)
+python run_comparison.py --dataset FinQA --methods policy,kate --samples 15
 ```
 
 ### Hyperparameter Exploration

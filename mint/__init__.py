@@ -11,7 +11,7 @@ from .pot import ProgramOfThoughtsPrompting, solve_with_pot
 from .zero_shot import ZeroShotPrompting, solve_with_zero_shot
 from .pal import ProgramAidedLanguageModel, solve_with_pal
 from .functions import get_execution_namespace
-from .prompts import create_fpp_prompt, create_problem_prompt, load_function_prototypes, load_fpp_template
+from .prompts import create_fpp_prompt, create_problem_prompt, load_function_prototypes, load_template
 from .utils import load_svamp_dataset, clean_code, execute_code, evaluate_result
 from .config import load_config
 
@@ -48,7 +48,7 @@ __all__ = [
     "create_fpp_prompt",
     "create_problem_prompt", 
     "load_function_prototypes",
-    "load_fpp_template",
+    "load_template",
     
     # Data and execution utilities
     "load_svamp_dataset",

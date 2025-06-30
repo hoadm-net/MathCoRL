@@ -2,10 +2,11 @@
 """
 MathCoRL - Step 3: Method Comparison
 
-Compare three approaches on mathematical reasoning datasets:
+Compare four approaches on mathematical reasoning datasets:
 1. Zero-shot FPP baseline
 2. FPP + Random examples
 3. FPP + Policy Network examples
+4. FPP + KATE examples (kNN-based selection)
 
 Usage:
     python run_comparison.py --dataset FinQA --samples 10
@@ -58,6 +59,7 @@ Method Comparison:
     1. Zero-shot FPP: Function Prototype Prompting without examples
     2. FPP + Random: FPP with randomly selected examples  
     3. FPP + Policy Network: FPP with policy-selected examples
+    4. FPP + KATE: FPP with kNN-based similarity selection
 
 Dataset Information:
     - GSM8K: Grade School Math (k=2 examples)
@@ -139,6 +141,10 @@ Dataset Information:
         help='Suppress detailed output during testing'
     )
     
+    parser.add_argument('--methods', type=str, default='zero-shot,random,policy,kate',
+                       help='Comma-separated list of methods to compare (default: zero-shot,random,policy,kate). '
+                            'Available: zero-shot, random, policy, kate')
+    
     args = parser.parse_args()
     
     # Set logging level
@@ -147,6 +153,17 @@ Dataset Information:
         logger.info("Verbose logging enabled")
     elif args.quiet:
         logging.getLogger().setLevel(logging.WARNING)
+    
+    # Parse methods selection
+    available_methods = ['zero-shot', 'random', 'policy', 'kate']
+    selected_methods = [m.strip() for m in args.methods.split(',')]
+    
+    # Validate methods
+    for method in selected_methods:
+        if method not in available_methods:
+            logger.error(f"❌ Invalid method: {method}")
+            logger.error(f"Available methods: {', '.join(available_methods)}")
+            return 1
     
     # Set random seed for reproducibility
     random.seed(args.seed)
@@ -161,6 +178,7 @@ Dataset Information:
     logger.info(f"Dataset: {args.dataset}")
     logger.info(f"Test samples: {args.samples}")
     logger.info(f"Random seed: {args.seed}")
+    logger.info(f"Methods: {', '.join(selected_methods)}")
     logger.info(f"Candidates dir: {args.candidates_dir}")
     logger.info(f"Models dir: {args.models_dir}")
     logger.info(f"Output dir: {args.output_dir}")
@@ -196,7 +214,7 @@ Dataset Information:
         logger.info(f"🚀 Starting comparison on {args.samples} {args.dataset} samples...")
         logger.info("=" * 50)
         
-        results = study.run_comparison(n_samples=args.samples)
+        results = study.run_comparison(n_samples=args.samples, methods=selected_methods)
         
         # Display final summary
         logger.info("\n" + "=" * 60)
@@ -207,14 +225,20 @@ Dataset Information:
         logger.info(f"Best method: {results['best_method']} ({results['best_accuracy']:.1f}%)")
         logger.info("-" * 60)
         
-        # Method-wise results
-        methods_info = [
-            ("Zero-shot FPP", results['accuracies']['zero_shot_fpp'], "🎯"),
-            ("FPP + Random", results['accuracies']['fpp_random'], "🎲"),
-            ("FPP + Policy Net", results['accuracies']['fpp_policy'], "🤖")
+        # Method-wise results - only show selected methods
+        all_methods_info = [
+            ("zero-shot", "Zero-shot FPP", results['accuracies']['zero_shot_fpp'], "🎯"),
+            ("random", "FPP + Random", results['accuracies']['fpp_random'], "🎲"),
+            ("policy", "FPP + Policy Net", results['accuracies']['fpp_policy'], "🤖"),
+            ("kate", "FPP + KATE", results['accuracies']['fpp_kate'], "🔍")
         ]
         
-        for method_name, accuracy, emoji in methods_info:
+        # Filter to only selected methods
+        methods_info = [(method_key, method_name, accuracy, emoji) 
+                       for method_key, method_name, accuracy, emoji in all_methods_info 
+                       if method_key in selected_methods]
+        
+        for method_key, method_name, accuracy, emoji in methods_info:
             if accuracy is not None:
                 status = "🏆" if method_name == results['best_method'] else "  "
                 logger.info(f"{status} {emoji} {method_name:<18}: {accuracy:>6.1f}%")
@@ -223,18 +247,33 @@ Dataset Information:
         
         logger.info("=" * 60)
         
-        # Calculate improvement
-        if results['accuracies']['fpp_policy'] is not None:
+        # Calculate improvements (only if both baseline and comparison methods are selected)
+        if 'zero-shot' in selected_methods:
             baseline = results['accuracies']['zero_shot_fpp']
-            policy_acc = results['accuracies']['fpp_policy']
-            improvement = policy_acc - baseline
             
-            if improvement > 0:
-                logger.info(f"📈 Policy Network improvement: +{improvement:.1f}% over zero-shot")
-            elif improvement < 0:
-                logger.info(f"📉 Policy Network performance: {improvement:.1f}% vs zero-shot")
-            else:
-                logger.info(f"📊 Policy Network matches zero-shot performance")
+            # Policy Network improvement
+            if 'policy' in selected_methods and results['accuracies']['fpp_policy'] is not None:
+                policy_acc = results['accuracies']['fpp_policy']
+                policy_improvement = policy_acc - baseline
+                
+                if policy_improvement > 0:
+                    logger.info(f"📈 Policy Network improvement: +{policy_improvement:.1f}% over zero-shot")
+                elif policy_improvement < 0:
+                    logger.info(f"📉 Policy Network performance: {policy_improvement:.1f}% vs zero-shot")
+                else:
+                    logger.info(f"📊 Policy Network matches zero-shot performance")
+            
+            # KATE improvement
+            if 'kate' in selected_methods and results['accuracies']['fpp_kate'] is not None:
+                kate_acc = results['accuracies']['fpp_kate']
+                kate_improvement = kate_acc - baseline
+                
+                if kate_improvement > 0:
+                    logger.info(f"📈 KATE improvement: +{kate_improvement:.1f}% over zero-shot")
+                elif kate_improvement < 0:
+                    logger.info(f"📉 KATE performance: {kate_improvement:.1f}% vs zero-shot")
+                else:
+                    logger.info(f"📊 KATE matches zero-shot performance")
         
         # Save results if requested
         if args.save_results:
