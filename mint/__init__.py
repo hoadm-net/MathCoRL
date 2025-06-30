@@ -22,6 +22,9 @@ from .evaluation import (
 )
 from .testing import TestRunner, DatasetLoader, create_fpp_solver, create_cot_solver, create_pot_solver, create_zero_shot_solver, create_pal_solver
 
+# In-Context Reinforcement Learning
+from .icrl import CandidateGenerator
+
 __version__ = "0.4.0"
 __author__ = "MathCoRL Team"
 
@@ -69,5 +72,8 @@ __all__ = [
     "create_cot_solver",
     "create_pot_solver",
     "create_zero_shot_solver",
-    "create_pal_solver"
+    "create_pal_solver",
+    
+    # In-Context Reinforcement Learning
+    "CandidateGenerator"
 ]
