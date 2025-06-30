@@ -141,9 +141,9 @@ Dataset Information:
         help='Suppress detailed output during testing'
     )
     
-    parser.add_argument('--methods', type=str, default='zero-shot,random,policy,kate',
-                       help='Comma-separated list of methods to compare (default: zero-shot,random,policy,kate). '
-                            'Available: zero-shot, random, policy, kate')
+    parser.add_argument('--methods', type=str, default='zero-shot,random,policy,kate,cds',
+                       help='Comma-separated list of methods to compare (default: zero-shot,random,policy,kate,cds). '
+                            'Available: zero-shot, random, policy, kate, cds')
     
     args = parser.parse_args()
     
@@ -155,7 +155,7 @@ Dataset Information:
         logging.getLogger().setLevel(logging.WARNING)
     
     # Parse methods selection
-    available_methods = ['zero-shot', 'random', 'policy', 'kate']
+    available_methods = ['zero-shot', 'random', 'policy', 'kate', 'cds']
     selected_methods = [m.strip() for m in args.methods.split(',')]
     
     # Validate methods
@@ -230,7 +230,8 @@ Dataset Information:
             ("zero-shot", "Zero-shot FPP", results['accuracies']['zero_shot_fpp'], "🎯"),
             ("random", "FPP + Random", results['accuracies']['fpp_random'], "🎲"),
             ("policy", "FPP + Policy Net", results['accuracies']['fpp_policy'], "🤖"),
-            ("kate", "FPP + KATE", results['accuracies']['fpp_kate'], "🔍")
+            ("kate", "FPP + KATE", results['accuracies']['fpp_kate'], "🔍"),
+            ("cds", "FPP + CDS", results['accuracies']['fpp_cds'], "📚")
         ]
         
         # Filter to only selected methods

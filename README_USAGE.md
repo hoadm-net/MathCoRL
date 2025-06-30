@@ -2,11 +2,13 @@
 
 ## 🔭 Overview
 
-MathCoRL implements **In-Context Reinforcement Learning** for mathematical reasoning, comparing three approaches:
+MathCoRL implements **In-Context Reinforcement Learning** for mathematical reasoning, comparing five approaches:
 
 1. **🎯 Zero-shot FPP**: Function Prototype Prompting without examples
 2. **🎲 FPP + Random Examples**: FPP with randomly selected examples  
 3. **🤖 FPP + Policy Network**: FPP with policy-selected examples
+4. **🔍 FPP + KATE**: kNN-Augmented in-conText Example selection using cosine similarity
+5. **📚 FPP + CDS**: Curriculum Demonstration Selection using complexity-based partitioning
 
 ## 📋 Pipeline Architecture
 
@@ -120,7 +122,7 @@ python train_policy.py --dataset GSM8K --epochs 3 --lr 3e-4
 
 ## 🏆 Step 3: Run Comparison
 
-Compare four approaches on test samples to evaluate different example selection strategies.
+Compare five approaches on test samples to evaluate different example selection strategies.
 
 ### Basic Usage
 ```bash
@@ -135,23 +137,23 @@ python run_comparison.py --dataset GSM8K --samples 20 --save-results
 Select specific methods to compare using `--methods` parameter:
 
 ```bash
-# Compare only Policy Network vs KATE
-python run_comparison.py --dataset FinQA --methods policy,kate --samples 10
+# Compare only Policy Network vs CDS
+python run_comparison.py --dataset FinQA --methods policy,cds --samples 10
 
-# Compare baseline vs Policy Network  
-python run_comparison.py --dataset GSM8K --methods zero-shot,policy --samples 15
+# Compare baseline vs new methods
+python run_comparison.py --dataset GSM8K --methods zero-shot,kate,cds --samples 15
 
-# Test only KATE method
-python run_comparison.py --dataset SVAMP --methods kate --samples 5
+# Test only CDS method
+python run_comparison.py --dataset SVAMP --methods cds --samples 5
 
-# Compare traditional methods (no AI selection)
-python run_comparison.py --dataset TabMWP --methods zero-shot,random --samples 10
+# Compare similarity methods
+python run_comparison.py --dataset TabMWP --methods kate,cds --samples 10
 ```
 
 ### Options
 - `--dataset, -d`: Dataset to test on (required)
 - `--samples, -s`: Number of test samples (default: 10)
-- `--methods`: Comma-separated methods to compare (default: zero-shot,random,policy,kate)
+- `--methods`: Comma-separated methods to compare (default: zero-shot,random,policy,kate,cds)
 - `--seed`: Random seed for reproducibility (default: 42)
 - `--save-results`: Save detailed JSON results
 - `--skip-policy`: Skip Policy Network method if model unavailable
@@ -180,6 +182,11 @@ python run_comparison.py --dataset TabMWP --methods zero-shot,random --samples 1
 - **Usage**: Similarity-based method using semantic similarity for example selection
 - **Implementation**: Cosine similarity between problem and candidate embeddings
 
+#### 5. 📚 FPP + CDS
+- **Description**: Curriculum Demonstration Selection using complexity-based partitioning
+- **Usage**: Complexity-based method using difficulty partitioning for example selection
+- **Implementation**: Difficulty partitioning based on mathematical complexity
+
 ### Output Format
 ```
 🏆 FINAL COMPARISON RESULTS
@@ -192,9 +199,11 @@ Best method: [BEST_METHOD] (X.X%)
 🎲 FPP + Random       : X.X%
 🤖 FPP + Policy Net   : X.X%
 🔍 FPP + KATE         : X.X%
+📚 FPP + CDS          : X.X%
 ============================================================
 📈 Policy Network improvement: ±X.X% over zero-shot
 📈 KATE improvement: ±X.X% over zero-shot
+📈 CDS improvement: ±X.X% over zero-shot
 ```
 
 **Note**: Only selected methods (via `--methods`) will be displayed in results.
@@ -277,8 +286,8 @@ python generate_candidates.py --dataset FinQA --n-candidates 100
 python train_policy.py --dataset FinQA --epochs 5
 python run_comparison.py --dataset FinQA --samples 10 --save-results
 
-# Compare only AI methods (Policy Network vs KATE)
-python run_comparison.py --dataset FinQA --methods policy,kate --samples 15
+# Compare only AI methods (Policy Network vs CDS)
+python run_comparison.py --dataset FinQA --methods policy,cds --samples 15
 ```
 
 ### Hyperparameter Exploration

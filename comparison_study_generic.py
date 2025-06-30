@@ -10,12 +10,16 @@ import os
 import json
 import random
 import argparse
-from typing import Dict, List, Tuple, Any
+import time
+import logging
+from typing import Dict, List, Tuple, Any, Optional
 from pathlib import Path
 import sys
 from datetime import datetime
 import numpy as np
 from sklearn.metrics.pairwise import cosine_similarity
+import torch
+import torch.nn.functional as F
 
 # Add project root to path
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
@@ -28,7 +32,8 @@ from mint.icrl.candidate_generator import CandidateGenerator
 from mint.icrl.policy_network import PolicyNetwork
 from mint.icrl.evaluator import PolicyNetworkEvaluator
 from mint.utils import execute_code, clean_code
-from mint.config import create_standardized_embedding, load_config
+from mint.config import load_config, create_standardized_embedding
+from mint.utils import evaluate_result
 from openai import OpenAI
 
 
@@ -155,7 +160,6 @@ class GenericComparisonStudy:
             policy_net = PolicyNetwork(emb_dim=1536, hidden_dim=768)
             
             # Load model state
-            import torch
             checkpoint = torch.load(model_path, map_location='cpu')
             
             # Handle different checkpoint formats
@@ -170,6 +174,166 @@ class GenericComparisonStudy:
         except Exception as e:
             print(f"⚠️ Policy Network loading failed: {e}")
             return None
+
+    def _measure_complexity(self, candidate: Dict) -> float:
+        """
+        Measure complexity of a math problem for CDS method.
+        
+        Args:
+            candidate: Candidate example with question and code
+            
+        Returns:
+            Complexity score (higher = more complex)
+        """
+        question = candidate.get('question', '')
+        code = candidate.get('code', '')
+        context = candidate.get('context', '')
+        
+        complexity_score = 0.0
+        
+        # Text length complexity (normalized)
+        text_complexity = len(question) / 100.0
+        complexity_score += text_complexity * 0.3
+        
+        # Mathematical symbols and operations complexity
+        math_symbols = ['∑', '∏', '∫', '∂', '√', '±', '≤', '≥', '≠', '≈', '°', 'π', 'θ', 'α', 'β', 'γ']
+        operations = ['+', '-', '*', '/', '=', '(', ')', '^', '%', 'sin', 'cos', 'tan', 'log', 'exp']
+        
+        symbol_count = sum(question.count(symbol) for symbol in math_symbols)
+        operation_count = sum(question.count(op) for op in operations)
+        math_complexity = (symbol_count * 2 + operation_count) / 10.0
+        complexity_score += math_complexity * 0.4
+        
+        # Code complexity (length and structures)
+        code_lines = len(code.split('\n')) if code else 0
+        control_structures = ['for', 'while', 'if', 'elif', 'else', 'try', 'except']
+        structure_count = sum(code.count(struct) for struct in control_structures)
+        code_complexity = (code_lines + structure_count * 2) / 10.0
+        complexity_score += code_complexity * 0.3
+        
+        return complexity_score
+
+    def _partition_by_complexity(self, k_levels: int = 3) -> List[List[Dict]]:
+        """
+        Partition candidates into k difficulty levels based on complexity.
+        
+        Args:
+            k_levels: Number of difficulty levels
+            
+        Returns:
+            List of k lists, each containing candidates of similar complexity
+        """
+        # Calculate complexity for all candidates
+        candidates_with_complexity = []
+        for candidate in self.candidates:
+            complexity = self._measure_complexity(candidate)
+            candidates_with_complexity.append((candidate, complexity))
+        
+        # Sort by complexity (ascending)
+        candidates_with_complexity.sort(key=lambda x: x[1])
+        
+        # Partition into k roughly equal groups
+        total_candidates = len(candidates_with_complexity)
+        partition_size = total_candidates // k_levels
+        
+        partitions = []
+        for i in range(k_levels):
+            start_idx = i * partition_size
+            if i == k_levels - 1:  # Last partition gets remaining candidates
+                end_idx = total_candidates
+            else:
+                end_idx = (i + 1) * partition_size
+            
+            partition = [item[0] for item in candidates_with_complexity[start_idx:end_idx]]
+            partitions.append(partition)
+        
+        return partitions
+
+    def _select_cds_examples(self, sample: Dict) -> List[Dict]:
+        """
+        CDS (Curriculum Demonstration Selection) method.
+        Partitions candidates by complexity and selects from each level.
+        
+        Args:
+            sample: Test sample with question and context
+            
+        Returns:
+            List of k examples selected from different complexity levels
+        """
+        try:
+            # Partition candidates by complexity
+            k_levels = min(self.k, 3)  # Use up to 3 complexity levels
+            partitions = self._partition_by_complexity(k_levels)
+            
+            # Filter out empty partitions
+            partitions = [p for p in partitions if p]
+            
+            if not partitions:
+                print("⚠️ No valid partitions for CDS")
+                return random.sample(self.candidates, min(self.k, len(self.candidates)))
+            
+            selected_examples = []
+            
+            # Create test embedding for similarity-based selection within partitions
+            test_embedding = create_standardized_embedding(sample['question'], sample.get('context', ''))
+            
+            if test_embedding:
+                test_emb = np.array(test_embedding).reshape(1, -1)
+                
+                # Select from each partition using similarity
+                examples_per_partition = self.k // len(partitions)
+                remaining = self.k % len(partitions)
+                
+                for i, partition in enumerate(partitions):
+                    # Calculate how many to select from this partition
+                    n_select = examples_per_partition + (1 if i < remaining else 0)
+                    n_select = min(n_select, len(partition))
+                    
+                    if n_select == 0:
+                        continue
+                    
+                    # Use similarity within partition for selection
+                    partition_embeddings = np.array([c['embedding'] for c in partition])
+                    similarities = cosine_similarity(test_emb, partition_embeddings)[0]
+                    
+                    # Select top similar examples from this complexity level
+                    top_indices = np.argsort(similarities)[-n_select:]
+                    selected_from_partition = [partition[idx] for idx in top_indices]
+                    selected_examples.extend(selected_from_partition)
+            
+            else:
+                # Fallback: random selection from each partition
+                print("⚠️ Using random selection within partitions")
+                examples_per_partition = self.k // len(partitions)
+                remaining = self.k % len(partitions)
+                
+                for i, partition in enumerate(partitions):
+                    n_select = examples_per_partition + (1 if i < remaining else 0)
+                    n_select = min(n_select, len(partition))
+                    
+                    if n_select > 0:
+                        selected_from_partition = random.sample(partition, n_select)
+                        selected_examples.extend(selected_from_partition)
+            
+            # Ensure we have exactly k examples
+            if len(selected_examples) < self.k:
+                # Fill remaining slots randomly
+                remaining_candidates = [c for c in self.candidates if c not in selected_examples]
+                additional = random.sample(remaining_candidates, 
+                                         min(self.k - len(selected_examples), len(remaining_candidates)))
+                selected_examples.extend(additional)
+            elif len(selected_examples) > self.k:
+                # Trim to exactly k examples
+                selected_examples = selected_examples[:self.k]
+            
+            # Shuffle to avoid ordering bias
+            random.shuffle(selected_examples)
+            
+            return selected_examples
+            
+        except Exception as e:
+            print(f"⚠️ CDS selection failed: {e}")
+            return random.sample(self.candidates, min(self.k, len(self.candidates)))
 
     def _select_kate_examples(self, sample: Dict) -> List[Dict]:
         """
@@ -305,6 +469,46 @@ class GenericComparisonStudy:
             print(f"❌ KATE FPP error: {e}")
             return False, None
 
+    def test_fpp_with_cds_examples(self, sample: Dict) -> Tuple[bool, Any]:
+        """Test FPP with CDS (Curriculum Demonstration Selection) examples."""
+        try:
+            if len(self.candidates) < self.k:
+                print(f"⚠️ Not enough candidates ({len(self.candidates)} < {self.k})")
+                return False, None
+            
+            # Use CDS to select examples
+            cds_examples = self._select_cds_examples(sample)
+            
+            # Create prompt with CDS examples
+            prompt = create_fpp_with_examples_prompt(
+                question=sample['question'],
+                examples=cds_examples,
+                context=sample.get('context', '')
+            )
+            
+            # Use official FPP instance
+            response = self.fpp_instance._call_llm(prompt)
+            if not response:
+                return False, None
+            
+            # Clean and execute code
+            from mint.utils import clean_code, execute_code
+            cleaned_code = clean_code(response)
+            result, error = execute_code(cleaned_code)
+            
+            if error:
+                return False, None
+            
+            if result is not None:
+                is_correct = self.tolerance_func(result, sample['ground_truth'])
+                return is_correct, result
+            else:
+                return False, None
+            
+        except Exception as e:
+            print(f"❌ CDS FPP error: {e}")
+            return False, None
+
     def test_fpp_with_policy_examples(self, sample: Dict) -> Tuple[bool, Any]:
         """Test FPP with Policy Network selected examples."""
         if not self.policy_network:
@@ -372,7 +576,7 @@ class GenericComparisonStudy:
     def run_comparison(self, n_samples: int = 10, methods: List[str] = None) -> Dict[str, Any]:
         """Run comparison study on dataset samples."""
         if methods is None:
-            methods = ['zero-shot', 'random', 'policy', 'kate']
+            methods = ['zero-shot', 'random', 'policy', 'kate', 'cds']
         
         print(f"\n🚀 Starting {self.dataset_name} Comparison Study")
         print(f"📊 Testing {n_samples} samples")
@@ -395,6 +599,8 @@ class GenericComparisonStudy:
             results['policy_examples'] = {'correct': 0, 'total': 0, 'details': []}
         if 'kate' in methods:
             results['kate_examples'] = {'correct': 0, 'total': 0, 'details': []}
+        if 'cds' in methods:
+            results['cds_examples'] = {'correct': 0, 'total': 0, 'details': []}
         
         for i, sample in enumerate(test_samples):
             print(f"\n📝 Sample {i+1}/{len(test_samples)}")
@@ -431,7 +637,37 @@ class GenericComparisonStudy:
                 })
                 print(f"    Result: {result2} ({'✅' if success2 else '❌'})")
             
-            # Test 3: FPP + Policy Network (only if selected and available)
+            # Test 3: FPP + KATE examples (only if selected)
+            if 'kate' in methods:
+                print("  🔍 Testing FPP + KATE examples...")
+                success4, result4 = self.test_fpp_with_kate_examples(sample)
+                results['kate_examples']['total'] += 1
+                if success4:
+                    results['kate_examples']['correct'] += 1
+                results['kate_examples']['details'].append({
+                    'sample_id': i,
+                    'correct': success4,
+                    'predicted': result4,
+                    'ground_truth': sample['ground_truth']
+                })
+                print(f"    Result: {result4} ({'✅' if success4 else '❌'})")
+            
+            # Test 4: FPP + CDS examples (only if selected)
+            if 'cds' in methods:
+                print("  🔍 Testing FPP + CDS examples...")
+                success5, result5 = self.test_fpp_with_cds_examples(sample)
+                results['cds_examples']['total'] += 1
+                if success5:
+                    results['cds_examples']['correct'] += 1
+                results['cds_examples']['details'].append({
+                    'sample_id': i,
+                    'correct': success5,
+                    'predicted': result5,
+                    'ground_truth': sample['ground_truth']
+                })
+                print(f"    Result: {result5} ({'✅' if success5 else '❌'})")
+            
+            # Test 5: FPP + Policy Network (only if selected and available)
             if 'policy' in methods:
                 if self.policy_network:
                     print("  🤖 Testing FPP + Policy Network...")
@@ -455,21 +691,6 @@ class GenericComparisonStudy:
                         'ground_truth': sample['ground_truth']
                     })
             
-            # Test 4: FPP + KATE examples (only if selected)
-            if 'kate' in methods:
-                print("  🔍 Testing FPP + KATE examples...")
-                success4, result4 = self.test_fpp_with_kate_examples(sample)
-                results['kate_examples']['total'] += 1
-                if success4:
-                    results['kate_examples']['correct'] += 1
-                results['kate_examples']['details'].append({
-                    'sample_id': i,
-                    'correct': success4,
-                    'predicted': result4,
-                    'ground_truth': sample['ground_truth']
-                })
-                print(f"    Result: {result4} ({'✅' if success4 else '❌'})")
-            
             print("-" * 30)
         
         # Calculate final accuracies (only for selected methods)
@@ -490,6 +711,10 @@ class GenericComparisonStudy:
         if 'kate' in methods and results['kate_examples']['total'] > 0:
             kate_acc = (results['kate_examples']['correct'] / results['kate_examples']['total']) * 100
         
+        cds_acc = None
+        if 'cds' in methods and results['cds_examples']['total'] > 0:
+            cds_acc = (results['cds_examples']['correct'] / results['cds_examples']['total']) * 100
+        
         print(f"\n🏆 FINAL RESULTS - {self.dataset_name}")
         print("=" * 50)
         
@@ -503,6 +728,8 @@ class GenericComparisonStudy:
             print(f"FPP + Policy Net:   N/A (model not found)")
         if kate_acc is not None:
             print(f"FPP + KATE:         {kate_acc:.1f}% ({results['kate_examples']['correct']}/{results['kate_examples']['total']})")
+        if cds_acc is not None:
+            print(f"FPP + CDS:          {cds_acc:.1f}% ({results['cds_examples']['correct']}/{results['cds_examples']['total']})")
         
         # Determine winner (only among selected methods)
         method_scores = []
@@ -514,6 +741,8 @@ class GenericComparisonStudy:
             method_scores.append(('FPP + Policy Network', policy_acc))
         if kate_acc is not None:
             method_scores.append(('FPP + KATE', kate_acc))
+        if cds_acc is not None:
+            method_scores.append(('FPP + CDS', cds_acc))
         
         best_method = max(method_scores, key=lambda x: x[1]) if method_scores else ('N/A', 0.0)
         print(f"\n🥇 Best Method: {best_method[0]} ({best_method[1]:.1f}%)")
@@ -526,7 +755,8 @@ class GenericComparisonStudy:
                 'zero_shot_fpp': zero_shot_acc,
                 'fpp_random': random_acc,
                 'fpp_policy': policy_acc,
-                'fpp_kate': kate_acc
+                'fpp_kate': kate_acc,
+                'fpp_cds': cds_acc
             },
             'detailed_results': results,
             'best_method': best_method[0],
