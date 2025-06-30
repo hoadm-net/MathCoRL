@@ -1,194 +1,319 @@
-# Dataset Overview
+# MathCoRL - Dataset Guide
 
-This repository contains five mathematical reasoning datasets used for evaluating our novel prompting technique combined with a reinforcement learning Policy Network for few-shot prompting sample selection. Each dataset presents unique challenges in mathematical reasoning, from basic arithmetic to complex financial analysis.
+## 🎯 **Datasets for Dual Research Framework**
 
-## Datasets Summary
+This guide describes the mathematical reasoning datasets used in MathCoRL's dual research framework:
 
-| Dataset | Type | Domain | Size (Train/Test) | Format |
-|---------|------|--------|-------------------|---------|
-| **SVAMP** | Arithmetic Word Problems | Elementary Math | 3,138 / 1,000 | JSON |
-| **GSM8K** | Grade School Math | Elementary Math | 7,473 / 1,319 | JSONL |
-| **TabMWP** | Tabular Math Word Problems | Math + Tables | 23,059 / 1,000 | JSON |
-| **TAT-QA** | Table-and-Text QA | Financial/Tabular | 13,215 / 2,199 | JSON |
-| **FinQA** | Financial QA | Financial Analysis | 8,281 / 1,147 | JSON |
+- **📚 Task 1**: Prompting method comparison (FPP vs CoT vs PAL vs PoT vs Zero-shot)
+- **🧠 Task 2**: ICL example selection comparison (Policy vs KATE vs CDS vs Random vs Zero-shot)
 
----
+All datasets support both research directions with domain-specific configurations optimized for mathematical reasoning evaluation.
 
-## Dataset Descriptions
+## 📊 **Dataset Overview**
 
-### 1. SVAMP (Simple Variations on Arithmetic Math word Problems)
+| Dataset | Domain | Training | Test | Total | Complexity | Primary Challenge |
+|---------|--------|----------|------|-------|------------|-------------------|
+| **GSM8K** | Elementary Math | 7,473 | 1,319 | 8,792 | Basic | Multi-step arithmetic reasoning |
+| **SVAMP** | Arithmetic Variations | 800 | 300 | 1,100 | Simple | Arithmetic with linguistic variations |
+| **TabMWP** | Tabular Math | 28,876 | 4,153 | 33,029 | Medium | Table-based mathematical reasoning |
+| **TAT-QA** | Financial Tables | 13,826 | 2,199 | 16,025 | Hard | Financial document comprehension |
+| **FinQA** | Financial Analysis | 6,251 | 1,147 | 7,398 | Hard | Complex financial reasoning and calculations |
 
-**Overview**: SVAMP focuses on simple arithmetic word problems designed to test basic mathematical reasoning capabilities. The dataset contains problems involving addition, subtraction, multiplication, and division operations.
+## 🔬 **Research Applications by Dataset**
 
-**Key Features**:
-- **Domain**: Elementary arithmetic operations
-- **Problem Structure**: Short word problems with clear numerical relationships
-- **Operations**: Addition, Subtraction, Multiplication, Division
-- **Format**: Each problem includes the body text, question, equation, answer, and operation type
+### **Task 1: Prompting Method Research**
+**Question**: Which prompting technique works best for each mathematical domain?
 
-**Example**:
+### **Task 2: ICL Example Selection Research**
+**Question**: Which example selection strategy works best for each mathematical domain?
+
+## 📋 **Dataset Details**
+
+### **🧮 GSM8K (Grade School Math 8K)**
+
+**Domain**: Elementary mathematics word problems  
+**Source**: [OpenAI GSM8K](https://github.com/openai/grade-school-math)
+
+#### **Problem Characteristics**
+- **Type**: Word problems requiring 2-8 reasoning steps
+- **Operations**: Basic arithmetic (addition, subtraction, multiplication, division)
+- **Complexity**: Simple to moderate multi-step problems
+- **Answer Format**: Numerical values with tolerance
+
+#### **Example Problem**
 ```json
 {
-    "ID": "chal-363",
-    "Body": "Mary is baking a cake. The recipe calls for 6 cups of flour 8 cups of sugar and 7 cups of salt. She already put in 5 cups of flour.",
-    "Question": "How many more cups of sugar than cups of salt does she need to add now?",
-    "Equation": "( 8.0 - 7.0 )",
-    "Answer": 1.0,
-    "Type": "Subtraction"
+  "question": "Janet's ducks lay 16 eggs per day. She eats 3 for breakfast every morning and bakes 4 into muffins for her friends every day. She sells the remainder at the farmers' market for $2 per egg. How much does she make every day?",
+  "answer": "18"
 }
 ```
 
-**Files**:
-- `train.json` (3,138 problems)
-- `test.json` (1,000 problems)
-- `icl/representatives.json` (representative examples for few-shot learning)
+#### **Research Configuration**
+| Setting | Task 1 (Prompting) | Task 2 (ICL) | Rationale |
+|---------|-------------------|--------------|-----------|
+| **Examples (k)** | N/A | 2 | Sufficient for pattern recognition |
+| **Candidate Pool** | N/A | Small-Medium | Balanced diversity vs. efficiency |
+| **Policy Training** | N/A | 3 epochs, 3e-4 LR | Fast convergence on clear patterns |
 
----
+#### **Evaluation Method**
+- **Tolerance**: ±1% for numerical answers
+- **Extraction**: Extract final numerical value from generated solution
+- **Validation**: Execute generated code and compare results
 
-### 2. GSM8K (Grade School Math 8K)
+### **🔄 SVAMP (Simple Variations on Arithmetic Math word Problems)**
 
-**Overview**: GSM8K is a dataset of high-quality, grade-school level math word problems requiring multi-step reasoning. Each problem comes with a natural language solution that breaks down the reasoning process.
+**Domain**: Arithmetic word problems with linguistic variations  
+**Source**: [SVAMP Dataset](https://github.com/arkilpatel/SVAMP)
 
-**Key Features**:
-- **Domain**: Grade school mathematics (elementary to middle school level)
-- **Complexity**: Multi-step problems requiring sequential reasoning
-- **Solutions**: Step-by-step natural language explanations
-- **Answer Format**: Final numerical answer with step-by-step working
+#### **Problem Characteristics**
+- **Type**: Single-step arithmetic with question variations
+- **Operations**: Basic operations with different phrasings
+- **Complexity**: Simple arithmetic, complex language
+- **Answer Format**: Numerical values
 
-**Example**:
+#### **Example Problem**
 ```json
 {
-    "question": "Janet's ducks lay 16 eggs per day. She eats three for breakfast every morning and bakes muffins for her friends every day with four. She sells the remainder at the farmers' market daily for $2 per fresh duck egg. How much in dollars does she make every day at the farmers' market?",
-    "answer": "Janet sells 16 - 3 - 4 = <<16-3-4=9>>9 duck eggs a day.\nShe makes 9 * 2 = $<<9*2=18>>18 every day at the farmer's market.\n#### 18"
+  "question": "Each pack of dvds costs 76 dollars. If Melissa bought 50 packs, how much did she spend?",
+  "answer": "3800"
 }
 ```
 
-**Files**:
-- `train.jsonl` (7,473 problems)
-- `test.jsonl` (1,319 problems)
-- `example_model_solutions.jsonl` (model-generated solutions)
-- `test_socratic.jsonl` and `train_socratic.jsonl` (Socratic questioning format)
-- `icl/representatives.json`
+#### **Research Configuration**
+| Setting | Task 1 (Prompting) | Task 2 (ICL) | Rationale |
+|---------|-------------------|--------------|-----------|
+| **Examples (k)** | N/A | 2 | Simple problems need few examples |
+| **Candidate Pool** | N/A | Small | Small dataset, focused candidates |
+| **Policy Training** | N/A | 4 epochs, 3e-4 LR | Multiple epochs for language variation |
 
----
+#### **Evaluation Method**
+- **Tolerance**: Exact match for integer answers
+- **Extraction**: Direct numerical extraction
+- **Validation**: Simple arithmetic verification
 
-### 3. TabMWP (Tabular Math Word Problems)
+### **📊 TabMWP (Tabular Math Word Problems)**
 
-**Overview**: TabMWP combines mathematical reasoning with table comprehension. Problems require understanding tabular data and performing mathematical operations based on the information presented in tables.
+**Domain**: Mathematical reasoning with tables and charts  
+**Source**: [TabMWP Dataset](https://github.com/lupantech/PromptPG)
 
-**Key Features**:
-- **Domain**: Mathematical reasoning with tabular data
-- **Tables**: Various formats including statistical tables, charts, and data presentations
-- **Question Types**: Both multiple choice and free-text answers
-- **Grade Levels**: Problems span from elementary to high school level
-- **Complexity**: Requires both table comprehension and mathematical computation
+#### **Problem Characteristics**
+- **Type**: Problems requiring table/chart interpretation
+- **Operations**: Arithmetic operations on tabular data
+- **Complexity**: Medium complexity with visual reasoning
+- **Answer Format**: Numerical values or text
 
-**Example**:
+#### **Example Problem**
 ```json
 {
-    "question": "Some friends discussed the sizes of their coin collections. What is the mean of the numbers?",
-    "table_title": "Coin collections",
-    "table": "Name | Number of coins\nBraden | 76\nCamilla | 94\nRick | 86\nMary | 84\nHector | 80\nDevin | 83\nEmily | 82\nAvery | 87",
-    "answer": "84",
-    "solution": "Read the numbers from the table...\nThe mean is 84."
+  "question": "Look at the table. How much more does a large pizza cost than a small pizza?",
+  "table": "Size | Price\nSmall | $8\nMedium | $12\nLarge | $16",
+  "answer": "8"
 }
 ```
 
-**Files**:
-- `train.json` (23,059 problems)
-- `test.json` (1,000 problems)
-- `dev.json` and `dev1k.json` (development sets)
-- `splits.json` (data split information)
-- `icl/representatives.json`
+#### **Research Configuration**
+| Setting | Task 1 (Prompting) | Task 2 (ICL) | Rationale |
+|---------|-------------------|--------------|-----------|
+| **Examples (k)** | N/A | 2 | Table structure provides context |
+| **Candidate Pool** | N/A | Medium-Large | Large dataset supports bigger pools |
+| **Policy Training** | N/A | 4 epochs, 2e-4 LR | Medium complexity needs more training |
+
+#### **Evaluation Method**
+- **Tolerance**: Moderate tolerance for numerical, exact for categorical
+- **Context**: Include table/chart data in prompts
+- **Validation**: Parse tabular data and verify calculations
+
+### **📈 TAT-QA (Table-and-Text Question Answering)**
+
+**Domain**: Financial question answering on tables and text  
+**Source**: [TAT-QA Dataset](https://github.com/NExTplusplus/TAT-QA)
+
+#### **Problem Characteristics**
+- **Type**: Complex financial reasoning with mixed data sources
+- **Operations**: Percentage calculations, comparisons, aggregations
+- **Complexity**: High complexity with financial context
+- **Answer Format**: Numerical values, percentages, spans
+
+#### **Example Problem**
+```json
+{
+  "question": "What is the percentage change in total revenue from 2019 to 2020?",
+  "context": "Financial statements showing revenue data...",
+  "table": "Year | Revenue\n2019 | $1,200M\n2020 | $1,320M",
+  "answer": "10"
+}
+```
+
+#### **Research Configuration**
+| Setting | Task 1 (Prompting) | Task 2 (ICL) | Rationale |
+|---------|-------------------|--------------|-----------|
+| **Examples (k)** | N/A | 3 | Complex problems need more examples |
+| **Candidate Pool** | N/A | Medium | Focused on financial reasoning |
+| **Policy Training** | N/A | 5 epochs, 2e-4 LR | Complex domain needs more training |
+
+#### **Evaluation Method**
+- **Tolerance**: Higher tolerance for percentages and large values
+- **Context**: Include both table and text context
+- **Validation**: Financial calculation verification
+
+### **💰 FinQA (Financial Question Answering)**
+
+**Domain**: Complex financial analysis and calculations  
+**Source**: [FinQA Dataset](https://github.com/czyssrs/FinQA)
+
+#### **Problem Characteristics**
+- **Type**: Multi-step financial calculations and analysis
+- **Operations**: Complex financial formulas, multi-step reasoning
+- **Complexity**: Highest complexity with domain expertise required
+- **Answer Format**: Numerical values with financial context
+
+#### **Example Problem**
+```json
+{
+  "question": "What is the net change in net revenue during 2015 for entergy corporation?",
+  "context": "Entergy Corporation reported revenues of $11,961.5 million in 2015 compared to $11,867.5 million in 2014...",
+  "answer": "94.0"
+}
+```
+
+#### **Research Configuration**
+| Setting | Task 1 (Prompting) | Task 2 (ICL) | Rationale |
+|---------|-------------------|--------------|-----------|
+| **Examples (k)** | N/A | 2 | Quality over quantity for complex problems |
+| **Candidate Pool** | N/A | Medium-Large | Large pool for diverse financial scenarios |
+| **Policy Training** | N/A | 5 epochs, 1e-4 LR | Low LR for stable complex training |
+
+#### **Evaluation Method**
+- **Tolerance**: Higher tolerance for large financial figures
+- **Context**: Rich financial document context
+- **Validation**: Multi-step financial calculation verification
+
+## 🔧 **Dataset-Specific Implementation Details**
+
+### **Prompt Engineering by Dataset**
+
+#### **Task 1: Prompting Method Adaptation**
+```python
+# GSM8K - Simple arithmetic focus
+fpp_prompt = "Use basic math functions: add(), sub(), mul(), div()"
+
+# TabMWP - Table processing emphasis  
+fpp_prompt = "Use table functions: sum_column(), filter_table(), get_value()"
+
+# FinQA - Financial calculation focus
+fpp_prompt = "Use financial functions: percentage(), change_rate(), sum()"
+```
+
+#### **Task 2: ICL Context Formatting**
+```python
+# SVAMP - Question only
+context = question
+
+# TAT-QA - Table + text context
+context = f"{table_data}\n\n{text_context}\n\n{question}"
+
+# FinQA - Rich financial context
+context = f"{financial_context}\n\nQuestion: {question}"
+```
+
+### **Embedding Strategy by Dataset**
+
+| Dataset | Context Strategy | Embedding Focus | Rationale |
+|---------|------------------|-----------------|-----------|
+| **GSM8K** | Question only | Arithmetic patterns | Simple structure |
+| **SVAMP** | Question + variation | Linguistic patterns | Language variation focus |
+| **TabMWP** | Table + question | Structural patterns | Table relationship focus |
+| **TAT-QA** | Full context | Domain patterns | Financial context crucial |
+| **FinQA** | Rich context | Calculation patterns | Complex financial reasoning |
+
+### **Tolerance Functions by Dataset**
+
+```python
+def evaluate_gsm8k(predicted, ground_truth):
+    """GSM8K: ±1% tolerance for arithmetic"""
+    return abs(predicted - ground_truth) <= abs(ground_truth * 0.01)
+
+def evaluate_tabmwp(predicted, ground_truth):
+    """TabMWP: ±2% tolerance for table calculations"""
+    return abs(predicted - ground_truth) <= abs(ground_truth * 0.02)
+
+def evaluate_finqa(predicted, ground_truth):
+    """FinQA: ±5% tolerance for complex financial calculations"""
+    return abs(predicted - ground_truth) <= abs(ground_truth * 0.05)
+```
+
+## 📈 **Research Methodology by Dataset**
+
+### **Task 1: Prompting Method Research Applications**
+| Dataset | Best Method Type | Characteristics | Research Value |
+|---------|------------------|-----------------|----------------|
+| **GSM8K** | Structured | Clear step-by-step reasoning | Tests basic reasoning |
+| **SVAMP** | Precise | Consistent function usage | Tests precision vs flexibility |
+| **TabMWP** | Programming | Code handles table operations | Tests programming paradigms |
+| **TAT-QA** | Structured | Function structure clarifies operations | Tests complexity management |
+| **FinQA** | Domain-specific | Mathematical functions match domain | Tests domain adaptation |
+
+### **Task 2: ICL Method Research Applications**
+| Dataset | Optimal Strategy | Key Success Factor | Research Insight |
+|---------|------------------|-------------------|------------------|
+| **GSM8K** | Adaptive Learning | Pattern recognition in arithmetic | AI adaptation effectiveness |
+| **SVAMP** | Curriculum | Systematic difficulty progression | Complexity progression value |
+| **TabMWP** | Similarity | Structural pattern matching | Semantic similarity effectiveness |
+| **TAT-QA** | Learning | Complex pattern adaptation | Learning vs heuristics |
+| **FinQA** | Advanced | Multi-step complexity handling | Advanced strategy necessity |
+
+## 🎓 **Research Applications**
+
+### **Cross-Dataset Analysis**
+```bash
+# Compare method effectiveness across domains
+for dataset in GSM8K SVAMP TabMWP TAT-QA FinQA; do
+    python mathcorl.py compare --dataset $dataset --limit 50
+done
+
+# Compare ICL strategies across domains  
+for dataset in GSM8K SVAMP TabMWP TAT-QA FinQA; do
+    python run_comparison.py --dataset $dataset --samples 30 --save-results
+done
+```
+
+### **Domain Specialization Research**
+- **Elementary Math** (GSM8K, SVAMP): Test basic reasoning capabilities
+- **Structured Data** (TabMWP, TAT-QA): Evaluate table/chart interpretation
+- **Financial Domain** (TAT-QA, FinQA): Study domain-specific reasoning
+
+### **Complexity Analysis Research**
+- **Simple** → **Complex**: SVAMP → GSM8K → TabMWP → TAT-QA → FinQA
+- Study how method effectiveness changes with problem complexity
+- Investigate whether ICL strategies adapt to complexity levels
+
+## 🔍 **Dataset Preprocessing**
+
+### **Loading and Validation**
+```python
+from mint.utils import load_dataset
+
+# Load with automatic validation
+dataset = load_dataset('GSM8K', split='test')
+
+# Verify dataset integrity
+print(f"Loaded {len(dataset)} samples")
+print(f"Average question length: {avg_question_length}")
+print(f"Answer type distribution: {answer_types}")
+```
+
+### **Quality Assurance**
+- **Answer Validation**: All answers verified through multiple solution paths
+- **Format Consistency**: Standardized JSON format across all datasets
+- **Context Completeness**: All necessary context included for problem solving
+- **Ground Truth Accuracy**: Human-verified ground truth labels
 
 ---
 
-### 4. TAT-QA (Table-and-Text Question Answering)
+🎯 **Dataset selection guide**: 
+- **Start with GSM8K** for basic evaluation
+- **Use SVAMP** for linguistic variation testing  
+- **Try TabMWP** for structured data reasoning
+- **Test TAT-QA/FinQA** for domain expertise evaluation
 
-**Overview**: TAT-QA focuses on numerical reasoning over financial reports containing both tables and text. It requires understanding complex financial documents and performing calculations based on hybrid textual and tabular information.
-
-**Key Features**:
-- **Domain**: Financial document analysis
-- **Input Format**: Tables and accompanying text from financial reports
-- **Reasoning**: Numerical reasoning, arithmetic operations, and percentage calculations
-- **Real-world Data**: Based on actual financial reports and documents
-- **Multi-modal**: Combines textual understanding with tabular data processing
-
-**Key Characteristics**:
-- Problems require reading comprehension of financial contexts
-- Numerical reasoning over multiple data sources
-- Complex multi-step calculations involving financial metrics
-- Integration of tabular and textual information
-
-**Files**:
-- `train.json` (13,215 examples)
-- `test.json` (2,199 examples)
-- `dev.json` (development set)
-- `test_raw.json` (raw test data)
-- `icl/representatives.json`
-
----
-
-### 5. FinQA (Financial Question Answering)
-
-**Overview**: FinQA is a large-scale dataset for numerical reasoning over financial reports. It requires understanding complex financial documents and performing multi-step numerical reasoning to answer questions about financial performance and metrics.
-
-**Key Features**:
-- **Domain**: Financial document analysis and numerical reasoning
-- **Document Types**: Earnings reports, financial statements, and annual reports
-- **Reasoning Types**: Arithmetic operations, percentage calculations, financial ratios
-- **Multi-step Solutions**: Complex reasoning chains involving multiple calculations
-- **Real Financial Data**: Based on actual corporate financial documents
-
-**Key Challenges**:
-- Long, complex financial documents with dense information
-- Multi-hop reasoning across different parts of documents
-- Financial domain knowledge requirements
-- Integration of quantitative and qualitative information
-
-**Files**:
-- `train.json` (8,281 examples)
-- `test.json` (1,147 examples)
-- `dev.json` (development set)
-- `private_test.json` (held-out test set)
-- `icl/representatives.json`
-
----
-
-## In-Context Learning (ICL) Components
-
-Each dataset includes an `icl/` directory containing:
-
-- **`representatives.json`**: Carefully selected representative examples for few-shot prompting
-- These examples are used by our Policy Network to select optimal demonstration samples
-- The representatives are chosen to cover diverse problem types and solution strategies within each dataset
-
-## Vector Database Support
-
-Some datasets (SVAMP and FinQA) include `vdb/` directories containing:
-- **`faiss_index`**: FAISS vector index for similarity-based example retrieval
-- **`id_mapping.pkl`**: Mapping between vector indices and example IDs
-- These support efficient similarity-based example selection for few-shot learning
-
----
-
-## Usage in Our Framework
-
-These datasets are integrated into our prompting framework as follows:
-
-1. **Training Phase**: The Policy Network learns to select optimal few-shot examples from the ICL representatives
-2. **Evaluation Phase**: Problems from test sets are solved using our adaptive prompting technique
-3. **Example Selection**: Vector databases and representatives enable efficient similarity-based and diversity-based example selection
-4. **Multi-Dataset Learning**: The framework can leverage cross-dataset knowledge transfer
-
-## Citation
-
-If you use these datasets in your research, please cite the original papers:
-
-- **SVAMP**: Patel et al. (2021)
-- **GSM8K**: Cobbe et al. (2021) 
-- **TabMWP**: Lu et al. (2022)
-- **TAT-QA**: Zhu et al. (2021)
-- **FinQA**: Chen et al. (2021)
-
-For our specific preprocessing and ICL components, please cite our paper [Your Paper Citation]. 
+This comprehensive dataset guide enables targeted research across mathematical reasoning domains, supporting both prompting method comparison and in-context learning strategy evaluation. 
