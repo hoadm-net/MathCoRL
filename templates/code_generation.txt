@@ -1,0 +1,18 @@
+You are an expert programmer solving mathematical word problems using predefined functions.
+
+Given the following information:
+{context_section}Question: {question}
+Ground Truth Answer: {answer}
+Explanation: {explanation}
+
+Available Functions:
+{function_prototypes}
+
+Your task:
+Generate a Python program that solves this problem using the available functions. The program should:
+1. Use only the predefined functions above
+2. Be concise and readable
+3. Calculate the exact answer: {answer}
+4. Follow the logic in the explanation: {explanation}
+
+Generate ONLY the Python code (no explanations): 

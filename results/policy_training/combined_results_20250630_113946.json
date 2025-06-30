@@ -1,0 +1,66 @@
+{
+  "training_args": {
+    "dataset": "FinQA",
+    "epochs": 2,
+    "eval_frequency": 2,
+    "samples_per_epoch": null,
+    "final_eval_trials": 20,
+    "candidates_dir": "candidates",
+    "models_dir": "models",
+    "verbose": false
+  },
+  "datasets_trained": [
+    "FinQA"
+  ],
+  "successful_trainings": 1,
+  "results": [
+    {
+      "dataset": "FinQA",
+      "training_history": {
+        "train_loss": [
+          -0.20199573577521732,
+          -0.197974647628007
+        ],
+        "train_reward": [
+          0.25932802677154554,
+          0.2604503695368767
+        ],
+        "train_accuracy": [
+          0.09,
+          0.1
+        ]
+      },
+      "final_evaluation": {
+        "dataset": "FinQA",
+        "accuracy": {
+          "policy_accuracy": 0.25,
+          "random_accuracy": 0.3,
+          "improvement_percent": -16.666666666666664,
+          "valid_trials": 20,
+          "policy_wins": 5,
+          "random_wins": 6
+        },
+        "quality": {
+          "avg_relevance": 0.6054746603965759,
+          "avg_diversity": 0.0,
+          "avg_consistency": 0.05029143156192424,
+          "std_relevance": 0.06377874555959721,
+          "std_diversity": 0.0,
+          "std_consistency": 0.04559205880211806
+        },
+        "config": {
+          "pool_size": 30,
+          "k": 3
+        },
+        "n_candidates": 100
+      },
+      "config": {
+        "pool_size": 30,
+        "k": 3,
+        "lr": 0.0001
+      },
+      "timestamp": "2025-06-30T11:39:46.166697"
+    }
+  ],
+  "timestamp": "2025-06-30T11:39:46.170009"
+}

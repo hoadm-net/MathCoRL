@@ -18,8 +18,8 @@ import pandas as pd
 from openai import OpenAI
 from dotenv import load_dotenv
 
-from ..prompts import load_function_prototypes
-from ..config import load_config
+from ..prompts import load_function_prototypes, create_code_generation_prompt
+from ..config import load_config, create_standardized_embedding
 from ..utils import execute_code, evaluate_result, clean_code
 
 # Load environment variables
@@ -34,23 +34,23 @@ class CandidateGenerator:
     def __init__(self, 
                  api_key: Optional[str] = None,
                  model: Optional[str] = None,
-                 embedding_model: str = "text-embedding-3-small"):
+                 embedding_model: Optional[str] = None):
         """
         Initialize CandidateGenerator.
         
         Args:
             api_key: OpenAI API key
             model: Model for code generation (uses DEFAULT_MODEL from config if None)
-            embedding_model: Model for creating embeddings
+            embedding_model: Model for creating embeddings (uses EMBEDDING_MODEL from config if None)
         """
         self.api_key = api_key or os.getenv("OPENAI_API_KEY")
         if not self.api_key:
             raise ValueError("OpenAI API key required")
         
-        # Load config and use DEFAULT_MODEL if no model specified
+        # Load config and use defaults if not specified
         config = load_config()
         self.model = model or config['model']
-        self.embedding_model = embedding_model
+        self.embedding_model = embedding_model or config['embedding_model']
         
         self.client = OpenAI(api_key=self.api_key)
         
@@ -281,10 +281,10 @@ class CandidateGenerator:
                                     answer: float,
                                     explanation: str) -> str:
         """
-        Create prompt for generating Python code using FPP approach.
+        Create prompt for code generation using LangChain template.
         
         Args:
-            context: Problem context (Body)
+            context: Problem context
             question: Question text
             answer: Ground truth answer
             explanation: Explanation/equation
@@ -292,27 +292,7 @@ class CandidateGenerator:
         Returns:
             Formatted prompt for code generation
         """
-        prompt = f"""You are an expert programmer solving mathematical word problems using predefined functions.
-
-Given the following information:
-Context: {context if context else "N/A"}
-Question: {question}
-Ground Truth Answer: {answer}
-Explanation: {explanation}
-
-Available Functions:
-{self.function_prototypes}
-
-Your task:
-Generate a Python program that solves this problem using the available functions. The program should:
-1. Use only the predefined functions above
-2. Be concise and readable
-3. Calculate the exact answer: {answer}
-4. Follow the logic in the explanation: {explanation}
-
-Generate ONLY the Python code (no explanations):"""
-        
-        return prompt
+        return create_code_generation_prompt(question, answer, explanation, context)
     
     def validate_generated_code(self, code: str, expected_answer: float) -> Tuple[bool, str, Any]:
         """
@@ -430,6 +410,7 @@ Generate ONLY the Python code (no explanations):"""
     
     def create_embedding(self, text: str) -> Optional[List[float]]:
         """
+        DEPRECATED: Use create_standardized_embedding from config instead.
         Create embedding for text using OpenAI embedding model.
         
         Args:
@@ -557,6 +538,13 @@ Generate ONLY the Python code (no explanations):"""
                     continue
                 explanation = item[field_mapping["explanation"]]
             elif dataset_name == "FinQA":
+                # Pre-validate FinQA item để skip problematic ones early
+                if not self.is_valid_finqa_item(item):
+                    question_preview = self.get_nested_field(item, 'qa.question') or "Unknown question"
+                    logger.debug(f"Skipping invalid FinQA item: {str(question_preview)[:50]}...")
+                    failed_count += 1
+                    continue
+                    
                 # FinQA has special processing for its structure
                 context = self.create_finqa_context(item)
                 question = self.get_nested_field(item, field_mapping["question"])
@@ -584,13 +572,8 @@ Generate ONLY the Python code (no explanations):"""
                 logger.warning(f"Failed to generate valid code after retries, trying replacement")
                 continue
             
-            # Create embedding (context + question for datasets with context, question only for GSM8K)
-            if context:
-                embedding_text = f"{context}\n\n{question}"
-            else:
-                embedding_text = question
-                
-            embedding = self.create_embedding(embedding_text)
+            # Create embedding using standardized function
+            embedding = create_standardized_embedding(context, question, self.client)
             if not embedding:
                 failed_count += 1
                 logger.warning(f"Failed to create embedding, trying replacement")
@@ -837,22 +820,43 @@ Generate ONLY the Python code (no explanations):"""
         return expanded_data 
 
     def process_finqa_text_array(self, text_array: List[str]) -> str:
-        """Process FinQA text arrays (pre_text, post_text) - filter dots and combine."""
+        """Process FinQA text arrays (pre_text, post_text) - enhanced filtering of noise."""
         try:
             if not text_array:
                 return ""
             
-            # Filter out dot-only elements and empty strings
+            # Enhanced filtering để remove noise elements
             filtered_texts = []
             for text in text_array:
                 cleaned_text = text.strip()
-                if cleaned_text and cleaned_text != ".":
-                    filtered_texts.append(cleaned_text)
+                
+                # Skip empty strings
+                if not cleaned_text:
+                    continue
+                
+                # Skip pure dots patterns: ".", "..", "...", etc.
+                if all(c == '.' for c in cleaned_text):
+                    continue
+                
+                # Skip strings with only dots và whitespace
+                if all(c in '. \t\n\r' for c in cleaned_text):
+                    continue
+                
+                # Skip very short meaningless strings
+                if len(cleaned_text) < 2 and cleaned_text not in ['%', '$', '€', '£']:
+                    continue
+                
+                # Skip strings starting with dots và ending with dots only
+                if cleaned_text.startswith('.') and len(cleaned_text.replace('.', '').strip()) == 0:
+                    continue
+                
+                # Accept valid text
+                filtered_texts.append(cleaned_text)
             
             # Join with spaces
             combined_text = " ".join(filtered_texts)
             
-            logger.debug(f"Processed text array: {len(text_array)} → {len(filtered_texts)} sentences")
+            logger.debug(f"Enhanced FinQA text filtering: {len(text_array)} → {len(filtered_texts)} valid sentences")
             return combined_text
             
         except Exception as e:
@@ -966,25 +970,83 @@ Generate ONLY the Python code (no explanations):"""
             logger.warning(f"Failed to extract nested field '{field_path}' from item")
             return None
 
+    def is_valid_finqa_item(self, item: Dict[str, Any]) -> bool:
+        """Check if FinQA item has valid numeric answer."""
+        try:
+            qa_data = item.get('qa', {})
+            answer = qa_data.get('answer', '')
+            
+            # Skip empty answers
+            if not answer or str(answer).strip() == '':
+                return False
+            
+            # Skip yes/no questions
+            answer_lower = str(answer).lower().strip()
+            if answer_lower in ['yes', 'no', 'true', 'false']:
+                return False
+            
+            # Try to clean and convert to float
+            try:
+                self.clean_finqa_answer(answer)
+                return True
+            except (ValueError, TypeError):
+                return False
+                
+        except Exception:
+            return False
+
     def clean_finqa_answer(self, answer: Any) -> float:
-        """Clean FinQA answer and convert to float."""
+        """Enhanced FinQA answer cleaning with better currency/unit parsing."""
         try:
             # Convert to string and clean
             answer_str = str(answer).strip()
+            original_answer = answer_str
+            
+            # Handle empty or non-numeric strings first
+            if not answer_str or answer_str.lower() in ['-', 'n/a', 'nil', 'yes', 'no', 'true', 'false']:
+                raise ValueError(f"Non-numeric answer: '{original_answer}'")
             
             # Remove common formatting
             answer_str = answer_str.replace(",", "")  # Remove commas
             answer_str = answer_str.replace("$", "")  # Remove dollar signs
             answer_str = answer_str.replace("%", "")  # Remove percentages
             answer_str = answer_str.replace("(", "-").replace(")", "")  # Handle negatives
-            answer_str = answer_str.replace("million", "000000")  # Handle million
-            answer_str = answer_str.replace("billion", "000000000")  # Handle billion
             
-            # Handle empty or non-numeric strings
-            if not answer_str or answer_str in ['-', 'n/a', 'N/A', 'nil', 'Nil']:
-                return 0.0
+            # Enhanced million/billion parsing với space handling
+            import re
             
-            return float(answer_str)
+            # Handle "X million" or "X.Y million" patterns
+            million_pattern = r'([\d\.]+)\s*million'
+            billion_pattern = r'([\d\.]+)\s*billion'
+            
+            million_match = re.search(million_pattern, answer_str.lower())
+            billion_match = re.search(billion_pattern, answer_str.lower())
+            
+            if million_match:
+                base_value = float(million_match.group(1))
+                return base_value * 1000000
+            elif billion_match:
+                base_value = float(billion_match.group(1))
+                return base_value * 1000000000
+            else:
+                # Simple million/billion replacement for edge cases
+                answer_str = answer_str.lower().replace("million", "000000")
+                answer_str = answer_str.replace("billion", "000000000")
+            
+            # Remove any remaining non-numeric characters except decimal point và minus
+            answer_str = re.sub(r'[^\d\.\-]', '', answer_str)
+            
+            # Final validation
+            if not answer_str or answer_str in ['.', '-', '-.']:
+                raise ValueError(f"Invalid cleaned answer: '{answer_str}' from '{original_answer}'")
+            
+            result = float(answer_str)
+            
+            # Sanity check for extremely large numbers (likely parsing error)
+            if abs(result) > 1e15:
+                raise ValueError(f"Suspiciously large number: {result} from '{original_answer}'")
+            
+            return result
             
         except (ValueError, TypeError) as e:
             logger.warning(f"Failed to parse FinQA answer '{answer}': {e}")
