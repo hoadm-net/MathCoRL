@@ -28,7 +28,7 @@ def load_config():
     """Load configuration from environment variables."""
     return {
         'openai_api_key': os.getenv('OPENAI_API_KEY'),
-        'model': os.getenv('DEFAULT_MODEL', 'gpt-3.5-turbo'),
+        'model': os.getenv('DEFAULT_MODEL', 'gpt-4o-mini'),
         'temperature': float(os.getenv('TEMPERATURE', '0.0')),
         'max_tokens': int(os.getenv('MAX_TOKENS', '1000')),
         'langchain_tracing': os.getenv('LANGCHAIN_TRACING_V2', 'false').lower() == 'true',

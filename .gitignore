@@ -17,3 +17,4 @@ test_*.py
 # Large dataset files (if any)
 datasets/*/large_*
 datasets/*/*.large
+candidates/*

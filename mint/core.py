@@ -41,7 +41,7 @@ class FunctionPrototypePrompting:
         
         Args:
             api_key: OpenAI API key (optional, will use environment variable)
-            model: Model name (default: gpt-3.5-turbo)
+            model: Model name (default: gpt-4o-mini)
             temperature: Sampling temperature (default: 0.0)
             max_tokens: Maximum tokens in response (default: 1000)
         """
@@ -51,7 +51,7 @@ class FunctionPrototypePrompting:
             raise ValueError("OpenAI API key not found. Set OPENAI_API_KEY environment variable or pass api_key parameter.")
         
         # Setup model parameters
-        self.model = model or os.getenv("DEFAULT_MODEL", "gpt-3.5-turbo")
+        self.model = model or os.getenv("DEFAULT_MODEL", "gpt-4o-mini")
         self.temperature = temperature or float(os.getenv("TEMPERATURE", "0.0"))
         self.max_tokens = max_tokens or int(os.getenv("MAX_TOKENS", "1000"))
         
