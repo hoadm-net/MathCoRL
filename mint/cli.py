@@ -579,7 +579,10 @@ def _create_method_comparison_chart(df, save=False):
         'output_tokens': 'mean',
         'execution_time': 'mean',
         'total_cost': 'mean'
-    }).round(2)
+    })
+    
+    # Keep more precision for cost calculations
+    method_stats = method_stats.round(6)
     
     # Define method order and colors (matching actual data)
     method_order = ['Zero-Shot', 'CoT', 'PAL', 'PoT', 'FPP']
@@ -606,6 +609,10 @@ def _create_method_comparison_chart(df, save=False):
     ax1.set_ylabel('Tokens')
     ax1.tick_params(axis='x', rotation=0)
     
+    # Add legend to subplot 1 (upper left) - always has space
+    legend_handles = [plt.Rectangle((0,0),1,1, color=method_colors[method]) for method in available_methods]
+    ax1.legend(legend_handles, available_methods, loc='upper left', fontsize=10)
+    
     # Average Output Tokens
     bars2 = ax2.bar(ordered_stats.index, ordered_stats['output_tokens'], color=colors)
     ax2.set_title('Average Output Tokens by Method')
@@ -618,15 +625,24 @@ def _create_method_comparison_chart(df, save=False):
     ax3.set_ylabel('Seconds')
     ax3.tick_params(axis='x', rotation=0)
     
-    # Average Cost
-    bars4 = ax4.bar(ordered_stats.index, ordered_stats['total_cost'], color=colors)
+    # Average Cost (convert to 10^-3 USD for better visibility)
+    cost_in_millis = ordered_stats['total_cost'] * 1000
+    bars4 = ax4.bar(ordered_stats.index, cost_in_millis, color=colors)
     ax4.set_title('Average Cost by Method')
-    ax4.set_ylabel('USD')
+    ax4.set_ylabel('Cost (×10⁻³ USD)')
     ax4.tick_params(axis='x', rotation=0)
     
-    # Add legend to the last subplot
-    legend_handles = [plt.Rectangle((0,0),1,1, color=method_colors[method]) for method in available_methods]
-    ax4.legend(legend_handles, available_methods, loc='upper right', fontsize=10)
+    # Always set Y-axis limits for better visibility (never start from 0)
+    y_min = cost_in_millis.min() * 0.8  # More padding
+    y_max = cost_in_millis.max() * 1.2  # More padding
+    ax4.set_ylim(y_min, y_max)
+    
+    # Add value labels on top of bars for clarity
+    for i, v in enumerate(cost_in_millis.values):
+        ax4.text(i, v + (y_max - y_min) * 0.02, f'{v:.3f}', 
+                ha='center', va='bottom', fontsize=9)
+    
+
     
     plt.tight_layout()
     
@@ -650,11 +666,12 @@ def _create_cost_analysis_chart(df, save=False):
     ax1.pie(method_costs.values, labels=method_costs.index, autopct='%1.1f%%', startangle=90)
     ax1.set_title('Cost Distribution by Method')
     
-    # Cost vs Tokens Scatter
-    ax2.scatter(df['total_tokens'], df['total_cost'], c=df['method'].astype('category').cat.codes, 
+    # Cost vs Tokens Scatter (convert to 10^-3 USD for better visibility)
+    cost_in_millis = df['total_cost'] * 1000
+    ax2.scatter(df['total_tokens'], cost_in_millis, c=df['method'].astype('category').cat.codes, 
                alpha=0.6, s=60)
     ax2.set_xlabel('Total Tokens')
-    ax2.set_ylabel('Cost (USD)')
+    ax2.set_ylabel('Cost (×10⁻³ USD)')
     ax2.set_title('Cost vs Tokens Relationship')
     
     # Add method legend
