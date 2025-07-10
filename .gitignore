@@ -25,4 +25,4 @@ charts/*
 
 # Experiment data exports
 *_experiment_data.json
-tracking_export_*.json
+tracking_export_*.jsonvenv/
