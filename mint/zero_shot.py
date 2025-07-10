@@ -38,6 +38,10 @@ class ZeroShotPrompting:
         
         self.model_name = model_name or config['model']
         self.temperature = temperature if temperature is not None else config['temperature']
+        
+        # Setup LangSmith if configured
+        self._setup_langsmith()
+        
         self.llm = ChatOpenAI(
             model_name=self.model_name,
             temperature=self.temperature
@@ -76,10 +80,24 @@ Answer:"""
             if show_reasoning:
                 print(f"🎯 Zero-Shot Prompt:\n{prompt}\n")
             
-            # Get response from LLM
-            messages = [HumanMessage(content=prompt)]
-            response = self.llm.invoke(messages)
-            reasoning = response.content
+            # Get response from LLM with tracking
+            from .tracking import track_api_call, extract_tokens_from_response, count_tokens_openai
+            
+            with track_api_call("Zero-Shot", self.model_name, question, context) as tracker:
+                messages = [HumanMessage(content=prompt)]
+                
+                # Estimate input tokens
+                input_tokens = count_tokens_openai(prompt, self.model_name)
+                
+                response = self.llm.invoke(messages)
+                reasoning = response.content
+                
+                # Extract token counts from response
+                actual_input_tokens, output_tokens = extract_tokens_from_response(response)
+                if actual_input_tokens > 0:
+                    input_tokens = actual_input_tokens
+                
+                tracker.set_tokens(input_tokens, output_tokens)
             
             if show_reasoning:
                 print(f"🤖 Zero-Shot Response:\n{reasoning}\n")
@@ -178,6 +196,18 @@ Answer:"""
         
         logger.warning(f"Could not extract numerical answer from reasoning: {reasoning[:200]}...")
         return None
+    
+    def _setup_langsmith(self):
+        """Setup LangSmith tracing if configured."""
+        import os
+        if (os.getenv("LANGCHAIN_TRACING_V2", "false").lower() == "true" and 
+            os.getenv("LANGCHAIN_API_KEY")):
+            os.environ["LANGCHAIN_TRACING_V2"] = "true"
+            os.environ["LANGCHAIN_ENDPOINT"] = os.getenv("LANGCHAIN_ENDPOINT", "https://api.smith.langchain.com")
+            os.environ["LANGCHAIN_PROJECT"] = os.getenv("LANGCHAIN_PROJECT", "MathCoRL-ZeroShot")
+            logger.info(f"LangSmith tracing enabled for project: {os.getenv('LANGCHAIN_PROJECT')}")
+        else:
+            logger.info("LangSmith tracing disabled")
 
 
 def solve_with_zero_shot(question: str, context: str = "", model_name: str = None) -> Optional[float]:

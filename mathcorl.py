@@ -19,6 +19,12 @@ Quick Start:
 
     # Compare methods
     python mathcorl.py compare SVAMP --limit 20
+    
+    # API Usage Tracking
+    python mathcorl.py stats                    # Show usage statistics
+    python mathcorl.py export --format json    # Export tracking data
+    python mathcorl.py chart --type all        # Generate visualization charts
+    python mathcorl.py clear-logs              # Clear tracking logs
 
 Legacy Compatibility:
     This script maintains compatibility with the old usage patterns while providing
@@ -94,7 +100,7 @@ def main():
             return
         
         # Check for solve patterns
-        elif sys.argv[1] in ['solve', 'test', 'compare', 'interactive', 'datasets']:
+        elif sys.argv[1] in ['solve', 'test', 'compare', 'interactive', 'datasets', 'stats', 'clear-logs', 'export', 'chart']:
             # New format, pass directly to CLI
             mint_cli_main()
             return

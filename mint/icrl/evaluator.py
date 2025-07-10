@@ -57,13 +57,32 @@ class PolicyNetworkEvaluator:
             # Create prompt using LangChain template
             prompt = create_policy_evaluation_prompt(question, examples, context)
 
-            # Call GPT
-            response = self.openai_client.chat.completions.create(
-                model=self.model,
-                messages=[{"role": "user", "content": prompt}],
-                temperature=0.1,
-                max_tokens=300
-            )
+            # Call GPT with tracking
+            from ..tracking import track_api_call, count_tokens_openai
+            import time
+            
+            with track_api_call("ICRL-Evaluator", self.model, question, context) as tracker:
+                # Estimate input tokens
+                input_tokens = count_tokens_openai(prompt, self.model)
+                
+                start_time = time.time()
+                response = self.openai_client.chat.completions.create(
+                    model=self.model,
+                    messages=[{"role": "user", "content": prompt}],
+                    temperature=0.1,
+                    max_tokens=300
+                )
+                
+                # Extract token counts from response
+                usage = response.usage if hasattr(response, 'usage') else None
+                if usage:
+                    actual_input_tokens = usage.prompt_tokens
+                    output_tokens = usage.completion_tokens
+                else:
+                    actual_input_tokens = input_tokens
+                    output_tokens = count_tokens_openai(response.choices[0].message.content, self.model)
+                
+                tracker.set_tokens(actual_input_tokens, output_tokens)
             
             # Execute generated code
             generated_code = response.choices[0].message.content.strip()

@@ -22,6 +22,11 @@ Usage Examples:
 
     # List available datasets
     python -m mint.cli datasets
+
+    # API usage tracking
+    python -m mint.cli stats --hours 24        # Show usage stats
+    python -m mint.cli export --format csv     # Export tracking data
+    python -m mint.cli clear-logs              # Clear tracking logs
 """
 
 import argparse
@@ -36,6 +41,7 @@ from .zero_shot import ZeroShotPrompting
 from .pal import ProgramAidedLanguageModel
 from .testing import TestRunner, DatasetLoader, create_fpp_solver, create_cot_solver, create_pot_solver, create_zero_shot_solver, create_pal_solver
 from .evaluation import get_tolerance_function
+from .tracking import get_tracker
 
 
 def setup_logging(level: str = "INFO"):
@@ -357,6 +363,395 @@ def list_datasets():
     print("Usage: python -m mint.cli test --dataset DATASET_NAME")
 
 
+def show_tracking_stats(hours: int = 24):
+    """Show API usage tracking statistics with detailed breakdown."""
+    print(f"📊 API Usage Statistics (Last {hours} hours)")
+    print("=" * 50)
+    
+    try:
+        tracker = get_tracker()
+        summary = tracker.get_usage_summary(last_n_hours=hours)
+        
+        if 'error' in summary:
+            print(f"❌ {summary['error']}")
+            return
+        
+        if 'message' in summary:
+            print(f"💡 {summary['message']}")
+            return
+        
+        # Overall summary
+        stats = summary['summary']
+        print("🔥 OVERVIEW")
+        print(f"   Total Requests: {stats['total_requests']}")
+        print(f"   ✅ Successful: {stats['successful_requests']}")
+        print(f"   ❌ Failed: {stats['total_requests'] - stats['successful_requests']}")
+        print(f"   📈 Success Rate: {stats['success_rate']}")
+        print(f"   🔢 Total Tokens: {stats['total_tokens']:,}")
+        print(f"   💰 Total Cost: {stats['total_cost']}")
+        print(f"   ⏱️  Avg Time: {stats['avg_execution_time']}")
+        print()
+        
+        # Enhanced method breakdown with averages
+        if summary['by_method']:
+            print("🔧 BY METHOD (Detailed Analysis)")
+            print("-" * 70)
+            print(f"{'Method':<12} {'Reqs':<5} {'Avg Input':<10} {'Avg Output':<11} {'Avg Time':<9} {'Avg Cost':<10}")
+            print("-" * 70)
+            
+            for method, data in summary['by_method'].items():
+                avg_input = data['avg_input_tokens'] if 'avg_input_tokens' in data else 0
+                avg_output = data['avg_output_tokens'] if 'avg_output_tokens' in data else 0
+                avg_time = data['avg_time'] if 'avg_time' in data else 0
+                avg_cost = data['cost'] / data['requests'] if data['requests'] > 0 else 0
+                
+                print(f"{method:<12} {data['requests']:<5} {avg_input:<10.0f} {avg_output:<11.0f} {avg_time:<9.2f}s ${avg_cost:<9.6f}")
+            print()
+        
+        # Model breakdown
+        if summary['by_model']:
+            print("🤖 BY MODEL")
+            for model, data in summary['by_model'].items():
+                print(f"   {model}: {data['requests']} requests, {data['tokens']:,} tokens, ${data['cost']:.6f}")
+            print()
+            
+        print("💡 Use 'python mathcorl.py stats --hours N' to see stats for different time periods")
+        
+    except Exception as e:
+        print(f"❌ Error loading tracking data: {e}")
+
+
+def clear_tracking_logs():
+    """Clear API usage tracking logs."""
+    import os
+    from pathlib import Path
+    from datetime import datetime
+    
+    log_file = Path("logs/api_usage.jsonl")
+    
+    if not log_file.exists():
+        print("💡 No tracking logs found to clear.")
+        return
+    
+    # Create backup
+    backup_name = f"logs/api_usage_backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}.jsonl"
+    backup_path = Path(backup_name)
+    
+    try:
+        # Backup current log
+        if log_file.stat().st_size > 0:
+            os.rename(str(log_file), str(backup_path))
+            print(f"✅ Logs backed up to: {backup_path}")
+        
+        # Create empty log file
+        log_file.touch()
+        print("✅ Tracking logs cleared.")
+        
+    except Exception as e:
+        print(f"❌ Error clearing logs: {e}")
+
+
+def export_tracking_data(format: str = "csv"):
+    """Export tracking data to different formats."""
+    import json
+    from pathlib import Path
+    from datetime import datetime
+    
+    log_file = Path("logs/api_usage.jsonl")
+    
+    if not log_file.exists():
+        print("❌ No tracking logs found to export.")
+        return
+    
+    try:
+        # Load data
+        data = []
+        with open(log_file, 'r', encoding='utf-8') as f:
+            for line in f:
+                if line.strip():
+                    data.append(json.loads(line.strip()))
+        
+        if not data:
+            print("💡 No tracking data found.")
+            return
+        
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        
+        if format.lower() == "csv":
+            try:
+                import pandas as pd
+                df = pd.DataFrame(data)
+                output_file = f"tracking_export_{timestamp}.csv"
+                df.to_csv(output_file, index=False)
+                print(f"✅ Data exported to: {output_file}")
+            except ImportError:
+                print("❌ pandas not installed. Install with: pip install pandas")
+        
+        elif format.lower() == "json":
+            output_file = f"tracking_export_{timestamp}.json"
+            with open(output_file, 'w', encoding='utf-8') as f:
+                json.dump(data, f, indent=2, ensure_ascii=False)
+            print(f"✅ Data exported to: {output_file}")
+        
+        else:
+            print("❌ Unsupported format. Use 'csv' or 'json'.")
+            
+    except Exception as e:
+        print(f"❌ Error exporting data: {e}")
+
+
+def generate_charts(chart_type: str = "all", hours: int = 24, save: bool = False):
+    """Generate visualization charts for tracking data."""
+    try:
+        import matplotlib.pyplot as plt
+        import seaborn as sns
+        import pandas as pd
+        import numpy as np
+        from datetime import datetime, timedelta
+        import json
+        from pathlib import Path
+        
+        # Set style
+        plt.style.use('seaborn-v0_8')
+        sns.set_palette("husl")
+        
+    except ImportError as e:
+        print("❌ Required libraries not installed. Install with:")
+        print("   pip install matplotlib seaborn pandas")
+        return
+    
+    # Load data
+    log_file = Path("logs/api_usage.jsonl")
+    if not log_file.exists():
+        print("❌ No tracking logs found.")
+        return
+    
+    try:
+        # Load and filter data
+        data = []
+        cutoff_time = datetime.now() - timedelta(hours=hours)
+        
+        with open(log_file, 'r', encoding='utf-8') as f:
+            for line in f:
+                if line.strip():
+                    log_entry = json.loads(line.strip())
+                    log_time = datetime.fromisoformat(log_entry['timestamp'])
+                    if log_time >= cutoff_time:
+                        data.append(log_entry)
+        
+        if not data:
+            print(f"💡 No tracking data found in the last {hours} hours.")
+            return
+        
+        df = pd.DataFrame(data)
+        
+        # Generate charts based on type
+        if chart_type in ['comparison', 'all']:
+            _create_method_comparison_chart(df, save)
+        
+        if chart_type in ['cost', 'all']:
+            _create_cost_analysis_chart(df, save)
+        
+        if chart_type in ['time', 'all']:
+            _create_time_analysis_chart(df, save)
+        
+        if chart_type in ['tokens', 'all']:
+            _create_token_analysis_chart(df, save)
+        
+        if not save:
+            plt.show()
+        
+        print(f"✅ Charts generated successfully!")
+        
+    except Exception as e:
+        print(f"❌ Error generating charts: {e}")
+
+
+def _create_method_comparison_chart(df, save=False):
+    """Create method comparison chart."""
+    import matplotlib.pyplot as plt
+    import seaborn as sns
+    from datetime import datetime
+    
+    # Group by method
+    method_stats = df.groupby('method').agg({
+        'input_tokens': 'mean',
+        'output_tokens': 'mean',
+        'execution_time': 'mean',
+        'total_cost': 'mean'
+    }).round(2)
+    
+    # Define method order and colors (matching actual data)
+    method_order = ['Zero-Shot', 'CoT', 'PAL', 'PoT', 'FPP']
+    method_colors = {
+        'Zero-Shot': '#FF6B6B',  # Red
+        'CoT': '#4ECDC4',        # Teal
+        'PAL': '#45B7D1',        # Blue
+        'PoT': '#96CEB4',        # Green
+        'FPP': '#FECA57'         # Yellow
+    }
+    
+    # Reorder data according to method_order (only include methods that exist in data)
+    available_methods = [method for method in method_order if method in method_stats.index]
+    ordered_stats = method_stats.reindex(available_methods)
+    
+    # Create colors list in the same order
+    colors = [method_colors[method] for method in available_methods]
+    
+    fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, figsize=(15, 12))
+    
+    # Average Input Tokens
+    bars1 = ax1.bar(ordered_stats.index, ordered_stats['input_tokens'], color=colors)
+    ax1.set_title('Average Input Tokens by Method')
+    ax1.set_ylabel('Tokens')
+    ax1.tick_params(axis='x', rotation=0)
+    
+    # Average Output Tokens
+    bars2 = ax2.bar(ordered_stats.index, ordered_stats['output_tokens'], color=colors)
+    ax2.set_title('Average Output Tokens by Method')
+    ax2.set_ylabel('Tokens')
+    ax2.tick_params(axis='x', rotation=0)
+    
+    # Average Execution Time
+    bars3 = ax3.bar(ordered_stats.index, ordered_stats['execution_time'], color=colors)
+    ax3.set_title('Average Execution Time by Method')
+    ax3.set_ylabel('Seconds')
+    ax3.tick_params(axis='x', rotation=0)
+    
+    # Average Cost
+    bars4 = ax4.bar(ordered_stats.index, ordered_stats['total_cost'], color=colors)
+    ax4.set_title('Average Cost by Method')
+    ax4.set_ylabel('USD')
+    ax4.tick_params(axis='x', rotation=0)
+    
+    # Add legend to the last subplot
+    legend_handles = [plt.Rectangle((0,0),1,1, color=method_colors[method]) for method in available_methods]
+    ax4.legend(legend_handles, available_methods, loc='upper right', fontsize=10)
+    
+    plt.tight_layout()
+    
+    if save:
+        plt.savefig(f'charts/method_comparison_{datetime.now().strftime("%Y%m%d_%H%M%S")}.png', 
+                   dpi=300, bbox_inches='tight')
+        plt.close()
+
+
+def _create_cost_analysis_chart(df, save=False):
+    """Create cost analysis chart."""
+    import matplotlib.pyplot as plt
+    import seaborn as sns
+    from datetime import datetime
+    
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15, 6))
+    fig.suptitle('💰 Cost Analysis', fontsize=16, fontweight='bold')
+    
+    # Cost by Method (Pie Chart)
+    method_costs = df.groupby('method')['total_cost'].sum()
+    ax1.pie(method_costs.values, labels=method_costs.index, autopct='%1.1f%%', startangle=90)
+    ax1.set_title('Cost Distribution by Method')
+    
+    # Cost vs Tokens Scatter
+    ax2.scatter(df['total_tokens'], df['total_cost'], c=df['method'].astype('category').cat.codes, 
+               alpha=0.6, s=60)
+    ax2.set_xlabel('Total Tokens')
+    ax2.set_ylabel('Cost (USD)')
+    ax2.set_title('Cost vs Tokens Relationship')
+    
+    # Add method legend
+    methods = df['method'].unique()
+    for i, method in enumerate(methods):
+        ax2.scatter([], [], c=f'C{i}', label=method)
+    ax2.legend()
+    
+    plt.tight_layout()
+    
+    if save:
+        plt.savefig(f'charts/cost_analysis_{datetime.now().strftime("%Y%m%d_%H%M%S")}.png', 
+                   dpi=300, bbox_inches='tight')
+        plt.close()
+
+
+def _create_time_analysis_chart(df, save=False):
+    """Create time analysis chart."""
+    import matplotlib.pyplot as plt
+    import seaborn as sns
+    from datetime import datetime
+    
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15, 6))
+    fig.suptitle('⏱️ Time Analysis', fontsize=16, fontweight='bold')
+    
+    # Execution Time by Method (Box Plot)
+    sns.boxplot(data=df, x='method', y='execution_time', ax=ax1)
+    ax1.set_title('Execution Time Distribution by Method')
+    ax1.set_ylabel('Seconds')
+    ax1.tick_params(axis='x', rotation=45)
+    
+    # Time vs Tokens
+    ax2.scatter(df['total_tokens'], df['execution_time'], c=df['method'].astype('category').cat.codes, 
+               alpha=0.6, s=60)
+    ax2.set_xlabel('Total Tokens')
+    ax2.set_ylabel('Execution Time (seconds)')
+    ax2.set_title('Execution Time vs Tokens')
+    
+    # Add method legend
+    methods = df['method'].unique()
+    for i, method in enumerate(methods):
+        ax2.scatter([], [], c=f'C{i}', label=method)
+    ax2.legend()
+    
+    plt.tight_layout()
+    
+    if save:
+        plt.savefig(f'charts/time_analysis_{datetime.now().strftime("%Y%m%d_%H%M%S")}.png', 
+                   dpi=300, bbox_inches='tight')
+        plt.close()
+
+
+def _create_token_analysis_chart(df, save=False):
+    """Create token analysis chart."""
+    import matplotlib.pyplot as plt
+    import seaborn as sns
+    import numpy as np
+    from datetime import datetime
+    
+    fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, figsize=(15, 12))
+    fig.suptitle('🔢 Token Analysis', fontsize=16, fontweight='bold')
+    
+    # Input vs Output Tokens by Method
+    method_stats = df.groupby('method')[['input_tokens', 'output_tokens']].mean()
+    method_stats.plot(kind='bar', ax=ax1, stacked=True)
+    ax1.set_title('Average Input vs Output Tokens by Method')
+    ax1.set_ylabel('Tokens')
+    ax1.tick_params(axis='x', rotation=45)
+    ax1.legend(['Input Tokens', 'Output Tokens'])
+    
+    # Token Efficiency (Output/Input Ratio)
+    df['token_efficiency'] = df['output_tokens'] / df['input_tokens']
+    df['token_efficiency'].replace([np.inf, -np.inf], np.nan, inplace=True)
+    token_eff = df.groupby('method')['token_efficiency'].mean()
+    token_eff.plot(kind='bar', ax=ax2, color='purple')
+    ax2.set_title('Token Efficiency (Output/Input Ratio)')
+    ax2.set_ylabel('Ratio')
+    ax2.tick_params(axis='x', rotation=45)
+    
+    # Input Tokens Distribution
+    sns.histplot(data=df, x='input_tokens', hue='method', ax=ax3, alpha=0.7)
+    ax3.set_title('Input Tokens Distribution')
+    ax3.set_xlabel('Input Tokens')
+    
+    # Output Tokens Distribution
+    sns.histplot(data=df, x='output_tokens', hue='method', ax=ax4, alpha=0.7)
+    ax4.set_title('Output Tokens Distribution')
+    ax4.set_xlabel('Output Tokens')
+    
+    plt.tight_layout()
+    
+    if save:
+        plt.savefig(f'charts/token_analysis_{datetime.now().strftime("%Y%m%d_%H%M%S")}.png', 
+                   dpi=300, bbox_inches='tight')
+        plt.close()
+
+
 def main():
     """Main CLI function."""
     parser = argparse.ArgumentParser(
@@ -404,6 +799,28 @@ def main():
     # List datasets
     datasets_parser = subparsers.add_parser('datasets', help='List available datasets')
     
+    # API tracking statistics
+    stats_parser = subparsers.add_parser('stats', help='Show API usage statistics')
+    stats_parser.add_argument('--hours', type=int, default=24,
+                             help='Number of hours to look back (default: 24)')
+    
+    # Clear tracking logs
+    clear_parser = subparsers.add_parser('clear-logs', help='Clear API tracking logs')
+    
+    # Export tracking data
+    export_parser = subparsers.add_parser('export', help='Export tracking data')
+    export_parser.add_argument('--format', choices=['csv', 'json'], default='csv',
+                              help='Export format (default: csv)')
+    
+    # Generate charts
+    chart_parser = subparsers.add_parser('chart', help='Generate visualization charts')
+    chart_parser.add_argument('--type', choices=['comparison', 'cost', 'time', 'tokens', 'all'], 
+                             default='all', help='Chart type to generate (default: all)')
+    chart_parser.add_argument('--hours', type=int, default=24,
+                             help='Number of hours to look back (default: 24)')
+    chart_parser.add_argument('--save', action='store_true',
+                             help='Save charts to files instead of displaying')
+    
     # Global options
     parser.add_argument('--log-level', choices=['DEBUG', 'INFO', 'WARNING', 'ERROR'],
                        default='INFO', help='Logging level')
@@ -429,6 +846,19 @@ def main():
                     print(f"Error: {result['error']}")
                 if 'execution_error' in result and result['execution_error']:
                     print(f"Execution Error: {result['execution_error']}")
+            
+            # Show tracking stats for this request
+            print("\n📊 Request Stats:")
+            try:
+                tracker = get_tracker()
+                recent_summary = tracker.get_usage_summary(last_n_hours=1)
+                if 'summary' in recent_summary and recent_summary['summary']['total_requests'] > 0:
+                    last_request_cost = recent_summary['summary']['total_cost']
+                    last_request_tokens = recent_summary['summary']['total_tokens']
+                    print(f"   💰 Cost: ${last_request_cost:.6f}")
+                    print(f"   🔢 Tokens: {last_request_tokens}")
+            except:
+                pass  # Don't fail if tracking unavailable
         
         elif args.command == 'test':
             test_method(args.method, args.dataset, args.limit, 
@@ -439,6 +869,18 @@ def main():
         
         elif args.command == 'datasets':
             list_datasets()
+        
+        elif args.command == 'stats':
+            show_tracking_stats(args.hours)
+        
+        elif args.command == 'clear-logs':
+            clear_tracking_logs()
+        
+        elif args.command == 'export':
+            export_tracking_data(args.format)
+        
+        elif args.command == 'chart':
+            generate_charts(args.type, args.hours, args.save)
         
         else:
             parser.print_help()

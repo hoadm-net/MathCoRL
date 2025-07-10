@@ -351,12 +351,30 @@ class CandidateGenerator:
         
         for attempt in range(max_retries):
             try:
-                response = self.client.chat.completions.create(
-                    model=self.model,
-                    messages=[{"role": "user", "content": prompt}],
-                    temperature=0.1,
-                    max_tokens=500
-                )
+                # Generate code with tracking
+                from ..tracking import track_api_call, count_tokens_openai
+                
+                with track_api_call("ICRL-CandidateGen", self.model, question, context) as tracker:
+                    # Estimate input tokens
+                    input_tokens = count_tokens_openai(prompt, self.model)
+                    
+                    response = self.client.chat.completions.create(
+                        model=self.model,
+                        messages=[{"role": "user", "content": prompt}],
+                        temperature=0.1,
+                        max_tokens=500
+                    )
+                    
+                    # Extract token counts from response
+                    usage = response.usage if hasattr(response, 'usage') else None
+                    if usage:
+                        actual_input_tokens = usage.prompt_tokens
+                        output_tokens = usage.completion_tokens
+                    else:
+                        actual_input_tokens = input_tokens
+                        output_tokens = count_tokens_openai(response.choices[0].message.content, self.model)
+                    
+                    tracker.set_tokens(actual_input_tokens, output_tokens)
                 
                 raw_code = response.choices[0].message.content.strip()
                 
@@ -426,11 +444,30 @@ class CandidateGenerator:
                 logger.warning("Empty text for embedding")
                 return None
                 
-            response = self.client.embeddings.create(
-                model=self.embedding_model,
-                input=clean_text
-            )
-            return response.data[0].embedding
+            # Create embedding with tracking
+            from ..tracking import track_api_call, count_tokens_openai
+            
+            with track_api_call("ICRL-Embedding", self.embedding_model, clean_text, "") as tracker:
+                # Estimate input tokens for embedding
+                input_tokens = count_tokens_openai(clean_text, self.embedding_model)
+                
+                response = self.client.embeddings.create(
+                    model=self.embedding_model,
+                    input=clean_text
+                )
+                
+                # Extract token counts from embedding response
+                usage = response.usage if hasattr(response, 'usage') else None
+                if usage:
+                    actual_input_tokens = usage.prompt_tokens
+                    output_tokens = 0  # Embeddings don't have output tokens
+                else:
+                    actual_input_tokens = input_tokens
+                    output_tokens = 0
+                
+                tracker.set_tokens(actual_input_tokens, output_tokens)
+                
+                return response.data[0].embedding
             
         except Exception as e:
             logger.error(f"Embedding creation failed: {e}")

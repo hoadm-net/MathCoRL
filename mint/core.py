@@ -95,7 +95,7 @@ class FunctionPrototypePrompting:
             prompt = create_fpp_prompt(question, context)
             
             # Generate code using LLM
-            raw_code = self._call_llm(prompt)
+            raw_code = self._call_llm(prompt, question, context)
             if not raw_code:
                 logger.error("No response received from LLM")
                 return None
@@ -130,7 +130,8 @@ class FunctionPrototypePrompting:
             prompt = create_problem_prompt(problem, context)
             
             # Generate code using LLM
-            raw_code = self._call_llm(prompt)
+            question_text = problem.get('Question', '') if isinstance(problem, dict) else str(problem)
+            raw_code = self._call_llm(prompt, question_text, context)
             if not raw_code:
                 logger.error("No response received from LLM")
                 return None
@@ -174,7 +175,7 @@ class FunctionPrototypePrompting:
             prompt = create_fpp_prompt(question, context)
             
             # Generate code using LLM
-            raw_code = self._call_llm(prompt)
+            raw_code = self._call_llm(prompt, question, context)
             if not raw_code:
                 result['error'] = "No response received from LLM"
                 return result
@@ -197,24 +198,41 @@ class FunctionPrototypePrompting:
         
         return result
     
-    def _call_llm(self, prompt: str) -> str:
+    def _call_llm(self, prompt: str, question: str = "", context: str = "") -> str:
         """
-        Call LLM API to generate code.
+        Call LLM API to generate code with tracking.
         
         Args:
             prompt: Formatted prompt string
+            question: Original question for tracking
+            context: Original context for tracking
             
         Returns:
             Generated code or empty string if failed
         """
+        from .tracking import track_api_call, extract_tokens_from_response, count_tokens_openai
+        
         try:
-            messages = [
-                SystemMessage(content="You are an expert Python programmer specialized in mathematical problem solving."),
-                HumanMessage(content=prompt)
-            ]
-            
-            response = self.llm.invoke(messages)
-            return response.content.strip()
+            with track_api_call("FPP", self.model, question, context) as tracker:
+                messages = [
+                    SystemMessage(content="You are an expert Python programmer specialized in mathematical problem solving."),
+                    HumanMessage(content=prompt)
+                ]
+                
+                # Estimate input tokens
+                system_content = "You are an expert Python programmer specialized in mathematical problem solving."
+                input_tokens = count_tokens_openai(system_content + prompt, self.model)
+                
+                response = self.llm.invoke(messages)
+                
+                # Extract token counts from response
+                actual_input_tokens, output_tokens = extract_tokens_from_response(response)
+                if actual_input_tokens > 0:
+                    input_tokens = actual_input_tokens
+                
+                tracker.set_tokens(input_tokens, output_tokens)
+                
+                return response.content.strip()
             
         except Exception as e:
             logger.error(f"Error calling LLM API: {e}")
