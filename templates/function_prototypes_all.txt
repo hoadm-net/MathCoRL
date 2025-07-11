@@ -1,0 +1,525 @@
+# Complete Function Prototypes - ALL Functions Combined
+# Original + Financial + Table functions for comprehensive ablation study
+
+# ==================== ORIGINAL BASIC MATH FUNCTIONS ====================
+
+def add(a: float, b: float) -> float:
+    """Add two numbers together.
+    
+    Args:
+        a: First number
+        b: Second number
+    
+    Returns:
+        Sum of a and b
+    
+    Example:
+        add(5, 3) -> 8
+    """
+    pass
+
+def sub(a: float, b: float) -> float:
+    """Subtract second number from first number.
+    
+    Args:
+        a: Number to subtract from
+        b: Number to subtract
+    
+    Returns:
+        Difference a - b
+    
+    Example:
+        sub(10, 4) -> 6
+    """
+    pass
+
+def mul(a: float, b: float) -> float:
+    """Multiply two numbers.
+    
+    Args:
+        a: First number
+        b: Second number
+    
+    Returns:
+        Product of a and b
+    
+    Example:
+        mul(6, 7) -> 42
+    """
+    pass
+
+def div(a: float, b: float) -> float:
+    """Divide first number by second number.
+    
+    Args:
+        a: Dividend
+        b: Divisor
+    
+    Returns:
+        Quotient a / b
+    
+    Example:
+        div(15, 3) -> 5
+    """
+    pass
+
+def mod(a: float, b: float) -> float:
+    """Get remainder of division.
+    
+    Args:
+        a: Dividend
+        b: Divisor
+    
+    Returns:
+        Remainder of a / b
+    
+    Example:
+        mod(17, 5) -> 2
+    """
+    pass
+
+def pow(a: float, b: float) -> float:
+    """Raise first number to the power of second number.
+    
+    Args:
+        a: Base
+        b: Exponent
+    
+    Returns:
+        a raised to the power of b
+    
+    Example:
+        pow(2, 3) -> 8
+    """
+    pass
+
+def min(*args: float) -> float:
+    """Find the minimum value among given numbers.
+    
+    Args:
+        *args: Variable number of arguments
+    
+    Returns:
+        Minimum value
+    
+    Example:
+        min(5, 2, 8, 1) -> 1
+    """
+    pass
+
+def max(*args: float) -> float:
+    """Find the maximum value among given numbers.
+    
+    Args:
+        *args: Variable number of arguments
+    
+    Returns:
+        Maximum value
+    
+    Example:
+        max(5, 2, 8, 1) -> 8
+    """
+    pass
+
+def abs(a: float) -> float:
+    """Get absolute value of a number.
+    
+    Args:
+        a: Input number
+    
+    Returns:
+        Absolute value of a
+    
+    Example:
+        abs(-5) -> 5
+    """
+    pass
+
+def round(a: float, digits: int = 0) -> float:
+    """Round a number to given number of decimal places.
+    
+    Args:
+        a: Number to round
+        digits: Number of decimal places (default: 0)
+    
+    Returns:
+        Rounded number
+    
+    Example:
+        round(3.14159, 2) -> 3.14
+    """
+    pass
+
+def floor(a: float) -> int:
+    """Round down to nearest integer.
+    
+    Args:
+        a: Input number
+    
+    Returns:
+        Largest integer less than or equal to a
+    
+    Example:
+        floor(3.7) -> 3
+    """
+    pass
+
+def ceil(a: float) -> int:
+    """Round up to nearest integer.
+    
+    Args:
+        a: Input number
+    
+    Returns:
+        Smallest integer greater than or equal to a
+    
+    Example:
+        ceil(3.2) -> 4
+    """
+    pass
+
+def sum(numbers: list) -> float:
+    """Calculate the sum of a list of numbers.
+    
+    Args:
+        numbers: List of numbers
+    
+    Returns:
+        Sum of all numbers
+    
+    Example:
+        sum([1, 2, 3, 4, 5]) -> 15
+    """
+    pass
+
+def mean(numbers: list) -> float:
+    """Calculate the arithmetic mean of a list of numbers.
+    
+    Args:
+        numbers: List of numbers
+    
+    Returns:
+        Arithmetic mean
+    
+    Example:
+        mean([2, 4, 6, 8]) -> 5.0
+    """
+    pass
+
+def median(numbers: list) -> float:
+    """Calculate the median of a list of numbers.
+    
+    Args:
+        numbers: List of numbers
+    
+    Returns:
+        Median value
+    
+    Example:
+        median([1, 3, 5, 7, 9]) -> 5
+    """
+    pass
+
+def mode(numbers: list) -> float:
+    """Find the most frequently occurring value.
+    
+    Args:
+        numbers: List of numbers
+    
+    Returns:
+        Most frequent value
+    
+    Example:
+        mode([1, 2, 2, 3, 2]) -> 2
+    """
+    pass
+
+def count(numbers: list) -> int:
+    """Count the number of elements in a list.
+    
+    Args:
+        numbers: List of numbers
+    
+    Returns:
+        Number of elements
+    
+    Example:
+        count([1, 2, 3, 4, 5]) -> 5
+    """
+    pass
+
+def percentage(part: float, whole: float) -> float:
+    """Calculate what percentage part is of whole.
+    
+    Args:
+        part: Part value
+        whole: Whole value
+    
+    Returns:
+        Percentage value
+    
+    Example:
+        percentage(25, 100) -> 25.0
+    """
+    pass
+
+def greater_than(a: float, b: float) -> bool:
+    """Check if a is greater than b.
+    
+    Args:
+        a: First number
+        b: Second number
+    
+    Returns:
+        True if a > b, False otherwise
+    
+    Example:
+        greater_than(5, 3) -> True
+    """
+    pass
+
+def less_than(a: float, b: float) -> bool:
+    """Check if a is less than b.
+    
+    Args:
+        a: First number
+        b: Second number
+    
+    Returns:
+        True if a < b, False otherwise
+    
+    Example:
+        less_than(3, 5) -> True
+    """
+    pass
+
+def equal(a: float, b: float) -> bool:
+    """Check if a equals b.
+    
+    Args:
+        a: First number
+        b: Second number
+    
+    Returns:
+        True if a == b, False otherwise
+    
+    Example:
+        equal(5, 5) -> True
+    """
+    pass
+
+def gcd(a: int, b: int) -> int:
+    """Calculate greatest common divisor.
+    
+    Args:
+        a: First integer
+        b: Second integer
+    
+    Returns:
+        Greatest common divisor
+    
+    Example:
+        gcd(12, 8) -> 4
+    """
+    pass
+
+def lcm(a: int, b: int) -> int:
+    """Calculate least common multiple.
+    
+    Args:
+        a: First integer
+        b: Second integer
+    
+    Returns:
+        Least common multiple
+    
+    Example:
+        lcm(12, 8) -> 24
+    """
+    pass
+
+# ==================== FINANCIAL-SPECIFIC FUNCTIONS ====================
+
+def calculate_percentage_change(old_value: float, new_value: float) -> float:
+    """Calculate percentage change between two values.
+    
+    Args:
+        old_value: Original value
+        new_value: New value
+    
+    Returns:
+        Percentage change
+    
+    Example:
+        calculate_percentage_change(100, 120) -> 20.0
+    """
+    pass
+
+def calculate_compound_growth_rate(start_value: float, end_value: float, years: float) -> float:
+    """Calculate compound annual growth rate (CAGR).
+    
+    Args:
+        start_value: Starting value
+        end_value: Ending value
+        years: Number of years
+    
+    Returns:
+        CAGR as percentage
+    
+    Example:
+        calculate_compound_growth_rate(1000, 1500, 3) -> 14.47
+    """
+    pass
+
+def calculate_ratio(numerator: float, denominator: float) -> float:
+    """Calculate ratio between two numbers.
+    
+    Args:
+        numerator: Top number
+        denominator: Bottom number
+    
+    Returns:
+        Ratio value
+    
+    Example:
+        calculate_ratio(3, 4) -> 0.75
+    """
+    pass
+
+def calculate_net_change(current: float, previous: float) -> float:
+    """Calculate net change between two values.
+    
+    Args:
+        current: Current value
+        previous: Previous value
+    
+    Returns:
+        Net change (current - previous)
+    
+    Example:
+        calculate_net_change(150, 100) -> 50
+    """
+    pass
+
+def calculate_growth_rate(old_value: float, new_value: float) -> float:
+    """Calculate growth rate as percentage.
+    
+    Args:
+        old_value: Original value
+        new_value: New value
+    
+    Returns:
+        Growth rate as percentage
+    
+    Example:
+        calculate_growth_rate(100, 150) -> 50.0
+    """
+    pass
+
+def calculate_return_on_investment(gain: float, cost: float) -> float:
+    """Calculate return on investment (ROI) percentage.
+    
+    Args:
+        gain: Investment gain (profit)
+        cost: Initial investment cost
+    
+    Returns:
+        ROI as percentage
+    
+    Example:
+        calculate_return_on_investment(2000, 10000) -> 20.0
+    """
+    pass
+
+def calculate_percentage(part: float, whole: float) -> float:
+    """Calculate what percentage part is of whole.
+    
+    Args:
+        part: Part value
+        whole: Whole value
+    
+    Returns:
+        Percentage value
+    
+    Example:
+        calculate_percentage(25, 100) -> 25.0
+    """
+    pass
+
+# ==================== TABLE-SPECIFIC FUNCTIONS ====================
+
+def get_cell(table: list, row: int, col: int) -> float:
+    """Get value from specific cell in table.
+    
+    Args:
+        table: 2D list representing the table
+        row: Row index (0-based)
+        col: Column index (0-based)
+    
+    Returns:
+        Value at specified cell
+    
+    Example:
+        get_cell([[1, 2], [3, 4]], 1, 0) -> 3
+    """
+    pass
+
+def get_column(table: list, col: int) -> list:
+    """Get entire column from table.
+    
+    Args:
+        table: 2D list representing the table
+        col: Column index (0-based)
+    
+    Returns:
+        List of values in the specified column
+    
+    Example:
+        get_column([[1, 2], [3, 4], [5, 6]], 1) -> [2, 4, 6]
+    """
+    pass
+
+def sum_column(table: list, col: int) -> float:
+    """Calculate sum of all values in a column.
+    
+    Args:
+        table: 2D list representing the table
+        col: Column index (0-based)
+    
+    Returns:
+        Sum of values in the column
+    
+    Example:
+        sum_column([[1, 2], [3, 4], [5, 6]], 1) -> 12
+    """
+    pass
+
+def average_column(table: list, col: int) -> float:
+    """Calculate average of all values in a column.
+    
+    Args:
+        table: 2D list representing the table
+        col: Column index (0-based)
+    
+    Returns:
+        Average of values in the column
+    
+    Example:
+        average_column([[1, 2], [3, 4], [5, 6]], 0) -> 3.0
+    """
+    pass
+
+def max_in_column(table: list, col: int) -> float:
+    """Find maximum value in a column.
+    
+    Args:
+        table: 2D list representing the table
+        col: Column index (0-based)
+    
+    Returns:
+        Maximum value in the column
+    
+    Example:
+        max_in_column([[1, 2], [5, 4], [3, 6]], 1) -> 6
+    """
+    pass 

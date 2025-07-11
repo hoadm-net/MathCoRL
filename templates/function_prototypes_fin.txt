@@ -1,0 +1,313 @@
+# Function Prototypes for Financial Calculations
+# Original functions + 10 new finance-specific functions
+
+# ==================== ORIGINAL BASIC MATH FUNCTIONS ====================
+
+def add(a: float, b: float) -> float:
+    """Add two numbers together.
+    
+    Args:
+        a: First number
+        b: Second number
+    
+    Returns:
+        Sum of a and b
+    
+    Example:
+        add(5, 3) -> 8
+    """
+    pass
+
+def sub(a: float, b: float) -> float:
+    """Subtract second number from first number.
+    
+    Args:
+        a: Number to subtract from
+        b: Number to subtract
+    
+    Returns:
+        Difference a - b
+    
+    Example:
+        sub(10, 4) -> 6
+    """
+    pass
+
+def mul(a: float, b: float) -> float:
+    """Multiply two numbers.
+    
+    Args:
+        a: First number
+        b: Second number
+    
+    Returns:
+        Product of a and b
+    
+    Example:
+        mul(6, 7) -> 42
+    """
+    pass
+
+def div(a: float, b: float) -> float:
+    """Divide first number by second number.
+    
+    Args:
+        a: Dividend
+        b: Divisor
+    
+    Returns:
+        Quotient a / b
+    
+    Example:
+        div(15, 3) -> 5
+    """
+    pass
+
+def pow(a: float, b: float) -> float:
+    """Raise first number to the power of second number.
+    
+    Args:
+        a: Base
+        b: Exponent
+    
+    Returns:
+        a raised to the power of b
+    
+    Example:
+        pow(2, 3) -> 8
+    """
+    pass
+
+def sum(numbers: list) -> float:
+    """Calculate the sum of a list of numbers.
+    
+    Args:
+        numbers: List of numbers
+    
+    Returns:
+        Sum of all numbers
+    
+    Example:
+        sum([1, 2, 3, 4, 5]) -> 15
+    """
+    pass
+
+def mean(numbers: list) -> float:
+    """Calculate the arithmetic mean of a list of numbers.
+    
+    Args:
+        numbers: List of numbers
+    
+    Returns:
+        Arithmetic mean
+    
+    Example:
+        mean([2, 4, 6, 8]) -> 5.0
+    """
+    pass
+
+def percentage(part: float, whole: float) -> float:
+    """Calculate what percentage part is of whole.
+    
+    Args:
+        part: Part value
+        whole: Whole value
+    
+    Returns:
+        Percentage value
+    
+    Example:
+        percentage(25, 100) -> 25.0
+    """
+    pass
+
+def round(a: float, digits: int = 0) -> float:
+    """Round a number to given number of decimal places.
+    
+    Args:
+        a: Number to round
+        digits: Number of decimal places (default: 0)
+    
+    Returns:
+        Rounded number
+    
+    Example:
+        round(3.14159, 2) -> 3.14
+    """
+    pass
+
+def abs(a: float) -> float:
+    """Get absolute value of a number.
+    
+    Args:
+        a: Input number
+    
+    Returns:
+        Absolute value of a
+    
+    Example:
+        abs(-5) -> 5
+    """
+    pass
+
+# ==================== NEW FINANCE-SPECIFIC FUNCTIONS ====================
+
+def calculate_growth_rate(initial: float, final: float) -> float:
+    """Calculate growth rate percentage.
+    
+    Args:
+        initial: Initial value
+        final: Final value
+    
+    Returns:
+        Growth rate as percentage
+    
+    Example:
+        calculate_growth_rate(100, 120) -> 20.0
+    """
+    pass
+
+def calculate_interest(principal: float, rate: float, time: float) -> float:
+    """Calculate simple interest.
+    
+    Args:
+        principal: Principal amount
+        rate: Interest rate (as percentage)
+        time: Time period in years
+    
+    Returns:
+        Interest amount
+    
+    Example:
+        calculate_interest(1000, 5, 2) -> 100.0
+    """
+    pass
+
+def calculate_compound_interest(principal: float, rate: float, time: float, compound_frequency: int = 1) -> float:
+    """Calculate compound interest.
+    
+    Args:
+        principal: Principal amount
+        rate: Annual interest rate (as percentage)
+        time: Time period in years
+        compound_frequency: Compounding frequency per year
+    
+    Returns:
+        Final amount after compound interest
+    
+    Example:
+        calculate_compound_interest(1000, 5, 2, 1) -> 1102.5
+    """
+    pass
+
+def calculate_present_value(future_value: float, rate: float, periods: int) -> float:
+    """Calculate present value of future cash flow.
+    
+    Args:
+        future_value: Future value
+        rate: Discount rate (as percentage)
+        periods: Number of periods
+    
+    Returns:
+        Present value
+    
+    Example:
+        calculate_present_value(1000, 10, 2) -> 826.45
+    """
+    pass
+
+def calculate_future_value(present_value: float, rate: float, periods: int) -> float:
+    """Calculate future value of present cash flow.
+    
+    Args:
+        present_value: Present value
+        rate: Interest rate (as percentage)
+        periods: Number of periods
+    
+    Returns:
+        Future value
+    
+    Example:
+        calculate_future_value(1000, 10, 2) -> 1210.0
+    """
+    pass
+
+def calculate_annuity_payment(principal: float, rate: float, periods: int) -> float:
+    """Calculate periodic payment for an annuity.
+    
+    Args:
+        principal: Loan principal amount
+        rate: Periodic interest rate (as percentage)
+        periods: Number of payment periods
+    
+    Returns:
+        Periodic payment amount
+    
+    Example:
+        calculate_annuity_payment(10000, 5, 12) -> 1128.25
+    """
+    pass
+
+def calculate_loan_balance(principal: float, rate: float, periods: int, payments_made: int) -> float:
+    """Calculate remaining loan balance after some payments.
+    
+    Args:
+        principal: Original loan amount
+        rate: Periodic interest rate (as percentage)
+        periods: Total number of periods
+        payments_made: Number of payments already made
+    
+    Returns:
+        Remaining loan balance
+    
+    Example:
+        calculate_loan_balance(10000, 1, 60, 12) -> 8240.15
+    """
+    pass
+
+def calculate_depreciation_straight_line(cost: float, salvage_value: float, useful_life: int) -> float:
+    """Calculate annual depreciation using straight-line method.
+    
+    Args:
+        cost: Initial cost of asset
+        salvage_value: Expected salvage value
+        useful_life: Useful life in years
+    
+    Returns:
+        Annual depreciation amount
+    
+    Example:
+        calculate_depreciation_straight_line(10000, 1000, 5) -> 1800.0
+    """
+    pass
+
+def calculate_break_even_point(fixed_costs: float, price_per_unit: float, variable_cost_per_unit: float) -> float:
+    """Calculate break-even point in units.
+    
+    Args:
+        fixed_costs: Total fixed costs
+        price_per_unit: Selling price per unit
+        variable_cost_per_unit: Variable cost per unit
+    
+    Returns:
+        Break-even point in units
+    
+    Example:
+        calculate_break_even_point(10000, 50, 30) -> 500.0
+    """
+    pass
+
+def calculate_return_on_investment(gain: float, cost: float) -> float:
+    """Calculate return on investment (ROI) percentage.
+    
+    Args:
+        gain: Investment gain (profit)
+        cost: Initial investment cost
+    
+    Returns:
+        ROI as percentage
+    
+    Example:
+        calculate_return_on_investment(2000, 10000) -> 20.0
+    """
+    pass 

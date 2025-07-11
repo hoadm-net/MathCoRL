@@ -129,6 +129,57 @@ def execute_code(code: str) -> Tuple[Any, str]:
         return None, error_msg
 
 
+def execute_code_with_namespace(code: str, custom_namespace: dict) -> Tuple[Any, str]:
+    """
+    Execute Python code with custom function namespace.
+    
+    Args:
+        code: Python code to execute
+        custom_namespace: Dictionary of functions to make available
+        
+    Returns:
+        Tuple of (result, error_message)
+    """
+    try:
+        # Create a safe execution namespace
+        namespace = {
+            '__builtins__': {
+                'range': range,
+                'len': len,
+                'float': float,
+                'int': int,
+                'str': str,
+                'list': list,
+                'dict': dict,
+                'max': max,
+                'min': min,
+                'abs': abs,
+                'round': round,
+                'sum': sum,
+            }
+        }
+        
+        # Add custom functions
+        namespace.update(custom_namespace)
+        
+        # Execute code
+        exec(code, namespace, namespace)
+        
+        # Get result - check multiple possible variable names
+        if 'result' in namespace:
+            return namespace['result'], ""
+        elif 'answer' in namespace:
+            return namespace['answer'], ""
+        elif 'solution' in namespace:
+            return namespace['solution'], ""
+        else:
+            return None, "Variable 'result', 'answer', or 'solution' not found in code"
+            
+    except Exception as e:
+        error_msg = f"Error executing code: {str(e)}\n{traceback.format_exc()}"
+        return None, error_msg
+
+
 def evaluate_result(predicted: Any, ground_truth: float) -> bool:
     """
     Evaluate predicted result against ground truth.
