@@ -1,6 +1,6 @@
 # Datasets in MathCoRL
 
-MathCoRL hỗ trợ 5 datasets cho mathematical reasoning research, mỗi dataset có đặc thù riêng về độ phức tạp và domain:
+MathCoRL supports 5 datasets for mathematical reasoning research, each with unique characteristics in complexity and domain:
 
 ## 📊 **Dataset Overview**
 

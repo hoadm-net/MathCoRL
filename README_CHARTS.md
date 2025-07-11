@@ -1,72 +1,72 @@
 # 📊 MathCoRL Visualization Charts
 
-MathCoRL bây giờ hỗ trợ tạo biểu đồ trực quan để phân tích hiệu suất các phương pháp prompting.
+MathCoRL now supports creating visual charts to analyze the performance of prompting methods.
 
-## 🎯 **Tính năng**
+## 🎯 **Features**
 
 ### **1. Method Comparison Chart**
-- So sánh **Input Tokens**, **Output Tokens**, **Execution Time**, **Cost** giữa các phương pháp
-- Hiển thị trung bình của từng metric
-- Dễ dàng nhận biết phương pháp nào hiệu quả nhất
+- Compare **Input Tokens**, **Output Tokens**, **Execution Time**, **Cost** between methods
+- Display average of each metric
+- Easily identify which method is most effective
 
 ### **2. Cost Analysis Chart**
-- **Pie Chart**: Phân bổ chi phí theo từng phương pháp
-- **Scatter Plot**: Mối quan hệ giữa số tokens và chi phí
-- Giúp tối ưu hóa budget
+- **Pie Chart**: Cost distribution by each method
+- **Scatter Plot**: Relationship between token count and cost
+- Help optimize budget
 
 ### **3. Time Analysis Chart**
-- **Box Plot**: Phân bố thời gian thực hiện theo phương pháp
-- **Scatter Plot**: Mối quan hệ giữa tokens và thời gian
-- Phát hiện bottlenecks
+- **Box Plot**: Execution time distribution by method
+- **Scatter Plot**: Relationship between tokens and time
+- Identify bottlenecks
 
 ### **4. Token Analysis Chart**
-- **Stacked Bar**: Input vs Output tokens theo phương pháp
-- **Token Efficiency**: Tỷ lệ Output/Input tokens
-- **Distribution**: Phân bố tokens của từng phương pháp
+- **Stacked Bar**: Input vs Output tokens by method
+- **Token Efficiency**: Output/Input token ratio
+- **Distribution**: Token distribution of each method
 
-## 🚀 **Cách sử dụng**
+## 🚀 **Usage**
 
-### **Tạo tất cả biểu đồ**
+### **Create all charts**
 ```bash
 python mathcorl.py chart --type all
 ```
 
-### **Tạo biểu đồ cụ thể**
+### **Create specific charts**
 ```bash
-# So sánh phương pháp
+# Method comparison
 python mathcorl.py chart --type comparison
 
-# Phân tích chi phí
+# Cost analysis
 python mathcorl.py chart --type cost
 
-# Phân tích thời gian
+# Time analysis
 python mathcorl.py chart --type time
 
-# Phân tích tokens
+# Token analysis
 python mathcorl.py chart --type tokens
 ```
 
-### **Lưu biểu đồ vào file**
+### **Save charts to file**
 ```bash
-# Lưu tất cả biểu đồ
+# Save all charts
 python mathcorl.py chart --type all --save
 
-# Lưu biểu đồ cụ thể
+# Save specific chart
 python mathcorl.py chart --type cost --save
 ```
 
-### **Tùy chỉnh thời gian**
+### **Customize time range**
 ```bash
-# Xem data trong 12 giờ qua
+# View data from last 12 hours
 python mathcorl.py chart --hours 12
 
-# Xem data trong 7 ngày qua
+# View data from last 7 days
 python mathcorl.py chart --hours 168
 ```
 
 ## 📁 **Output Files**
 
-Khi sử dụng `--save`, biểu đồ sẽ được lưu trong thư mục `charts/`:
+When using `--save`, charts will be saved in the `charts/` directory:
 
 ```
 charts/
@@ -76,7 +76,7 @@ charts/
 └── token_analysis_20250710_075148.png
 ```
 
-## 🎨 **Tùy chỉnh**
+## 🎨 **Customization**
 
 ### **Dependencies**
 ```bash
@@ -84,13 +84,13 @@ pip install matplotlib seaborn pandas
 ```
 
 ### **Chart Styles**
-- **Style**: Seaborn v0.8 với palette "husl"
-- **Resolution**: 300 DPI cho quality cao
-- **Format**: PNG với bbox_inches='tight'
+- **Style**: Seaborn v0.8 with "husl" palette
+- **Resolution**: 300 DPI for high quality
+- **Format**: PNG with bbox_inches='tight'
 
-## 📈 **Ví dụ phân tích**
+## 📈 **Analysis Examples**
 
-### **Từ biểu đồ Method Comparison:**
+### **From Method Comparison chart:**
 ```
 Method       Avg Input  Avg Output  Avg Time  Avg Cost
 FPP          1,806      33          1.77s     $0.000775
@@ -101,11 +101,11 @@ Zero-Shot    32         31          1.87s     $0.000063
 ```
 
 ### **Insights:**
-- **Zero-Shot**: Fastest & cheapest cho simple problems
-- **FPP**: High input tokens do function definitions
-- **CoT**: Balanced reasoning với detailed output
+- **Zero-Shot**: Fastest & cheapest for simple problems
+- **FPP**: High input tokens due to function definitions
+- **CoT**: Balanced reasoning with detailed output
 - **PAL**: Best cost/performance ratio
-- **PoT**: Slowest nhưng executable code
+- **PoT**: Slowest but executable code
 
 ## 🔧 **Troubleshooting**
 
@@ -113,13 +113,13 @@ Zero-Shot    32         31          1.87s     $0.000063
 ```
 UserWarning: Glyph 128202 (\N{BAR CHART}) missing from font(s) Arial.
 ```
-**Solution**: Warnings này không ảnh hưởng functionality. Emoji trong titles sẽ không hiển thị nhưng charts vẫn hoạt động bình thường.
+**Solution**: These warnings don't affect functionality. Emojis in titles won't display but charts will work normally.
 
 ### **No Data**
 ```
 💡 No tracking data found in the last 24 hours.
 ```
-**Solution**: Chạy một vài solve commands trước để có data:
+**Solution**: Run a few solve commands first to get data:
 ```bash
 python mathcorl.py solve --method fpp "What is 2+2?"
 python mathcorl.py solve --method cot "What is 2+2?"
@@ -129,22 +129,22 @@ python mathcorl.py solve --method cot "What is 2+2?"
 ```
 ❌ Required libraries not installed.
 ```
-**Solution**: Cài đặt dependencies:
+**Solution**: Install dependencies:
 ```bash
 pip install matplotlib seaborn pandas
 ```
 
 ## 🎯 **Best Practices**
 
-1. **Chạy nhiều tests trước** để có data đa dạng
-2. **Sử dụng --save** để lưu biểu đồ cho reports
-3. **Tùy chỉnh --hours** để focus vào timeframe cụ thể
-4. **Combine với stats command** để có cả text và visual analysis
+1. **Run multiple tests first** to get diverse data
+2. **Use --save** to save charts for reports
+3. **Customize --hours** to focus on specific timeframe
+4. **Combine with stats command** for both text and visual analysis
 
 ## 🔗 **Related Commands**
 
 ```bash
-# Xem stats dạng text
+# View stats in text format
 python mathcorl.py stats
 
 # Export raw data

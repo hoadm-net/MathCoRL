@@ -4,14 +4,14 @@ In-Context Reinforcement Learning (ICRL) Module
 This module implements the ICRL pipeline for enhancing mathematical problem solving:
 
 Step 1: Candidate Generation
-- Generate high-quality training candidates với FPP approach
+- Generate high-quality training candidates with FPP approach
 - Support multiple datasets: SVAMP, GSM8K, TabMWP, TAT-QA, FinQA
-- Comprehensive data processing và validation
+- Comprehensive data processing and validation
 
 Step 2: Policy Network Training  
 - Train neural policy for intelligent example selection
-- Multi-head attention architecture với contrastive learning
-- PPO-based optimization với multi-objective reward
+- Multi-head attention architecture with contrastive learning
+- PPO-based optimization with multi-objective reward
 - Comprehensive evaluation system (Policy vs Random)
 
 Step 3-5: To be implemented in future versions

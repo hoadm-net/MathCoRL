@@ -16,8 +16,8 @@ class PolicyNetwork(nn.Module):
     - Adaptive gating mechanisms
     
     Input:
-    - problem_emb: embedding vector từ OpenAI text-embedding-3-small (1536-D)
-    - candidate_embs: tensor chứa embedding của các ví dụ candidate (N x 1536)
+    - problem_emb: embedding vector from OpenAI text-embedding-3-small (1536-D)
+    - candidate_embs: tensor containing embeddings of candidate examples (N x 1536)
     
     Output:
     - probs: probability distribution over candidates for selection
@@ -70,7 +70,7 @@ class PolicyNetwork(nn.Module):
 
     def forward(self, problem_emb, candidate_embs):
         """
-        Forward pass với multi-head attention và adaptive scoring
+        Forward pass with multi-head attention and adaptive scoring
         
         Args:
             problem_emb: shape [1, 1536] - problem embedding
@@ -99,7 +99,7 @@ class PolicyNetwork(nn.Module):
             value=combined
         )
         
-        # Residual connection và layer norm
+        # Residual connection and layer norm
         combined = self.layer_norm1(combined + attn_out)
         
         # Feed-forward network
@@ -119,7 +119,7 @@ class PolicyNetwork(nn.Module):
         # Combine scores
         final_scores = interaction_scores + projected_scores
         
-        # Apply adaptive temperature và softmax
+        # Apply adaptive temperature and softmax
         temperature = torch.clamp(self.temperature, min=0.1, max=2.0)
         probs = F.softmax(final_scores / temperature, dim=0)
         
@@ -146,7 +146,7 @@ class PolicyNetwork(nn.Module):
 
 def contrastive_loss(problem_emb, positive_embs, negative_embs, temperature=0.1):
     """
-    Contrastive loss để pull positive examples closer, push negative ones away
+    Contrastive loss to pull positive examples closer, push negative ones away
     
     Args:
         problem_emb: [1, emb_dim] - problem embedding
@@ -188,8 +188,8 @@ def ppo_loss(old_probs, new_probs, advantages, epsilon=0.2):
     Proximal Policy Optimization loss
     
     Args:
-        old_probs: probabilities từ old policy
-        new_probs: probabilities từ current policy  
+        old_probs: probabilities from old policy
+        new_probs: probabilities from current policy  
         advantages: advantage values
         epsilon: clipping parameter
         

@@ -25,9 +25,9 @@ class PolicyNetworkTrainer:
     
     Features:
     - Load candidates from ICRL Step 1
-    - PPO training với multi-objective reward
+    - PPO training with multi-objective reward
     - Periodic evaluation during training
-    - Model saving và loading
+    - Model saving and loading
     - Dataset-specific configurations
     """
     
@@ -199,7 +199,7 @@ class PolicyNetworkTrainer:
                 example_embs = candidate_embs[chosen_indices]
                 reward = self.calculate_reward(is_correct, problem_emb, example_embs)
                 
-                # Forward pass với current policy
+                # Forward pass with current policy
                 new_probs = self.policy_net(problem_emb, candidate_embs)
                 selected_probs = new_probs[chosen_indices]
                 old_selected_probs = old_probs[chosen_indices]
@@ -218,7 +218,7 @@ class PolicyNetworkTrainer:
                     reduction='batchmean'
                 )
                 
-                # Contrastive loss (if we have both positive và negative examples)
+                # Contrastive loss (if we have both positive and negative examples)
                 contrastive_loss_value = torch.tensor(0.0)
                 if is_correct:
                     # Use selected examples as positive, random others as negative
@@ -270,7 +270,7 @@ class PolicyNetworkTrainer:
     def train(self, num_epochs: int = 10, eval_frequency: int = 3, 
              samples_per_epoch: int = None, save_best: bool = True) -> Dict[str, List[float]]:
         """
-        Train Policy Network với internal metrics tracking
+        Train Policy Network with internal metrics tracking
         
         Args:
             num_epochs: Number of training epochs
@@ -358,7 +358,7 @@ class PolicyNetworkTrainer:
 
     def evaluate_final_model(self, n_trials: int = 100) -> Dict[str, Any]:
         """Run comprehensive evaluation on trained model"""
-        logger.info(f"Running final evaluation với {n_trials} trials...")
+        logger.info(f"Running final evaluation with {n_trials} trials...")
         
         # Load best model
         if not self.load_model('best'):

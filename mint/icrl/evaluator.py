@@ -21,11 +21,11 @@ class PolicyNetworkEvaluator:
     Measures:
     1. Accuracy comparison: Policy vs Random selection
     2. Selection quality metrics (relevance, diversity, consistency)
-    3. Learning curves và progress tracking
+    3. Learning curves and progress tracking
     """
     
     def __init__(self, openai_client: OpenAI = None, model: str = None):
-        """Initialize evaluator với OpenAI client cho GPT evaluation"""
+        """Initialize evaluator with OpenAI client for GPT evaluation"""
         self.config = load_config()
         self.openai_client = openai_client or OpenAI(api_key=self.config.get('api_key'))
         self.model = model or self.config.get('model', 'gpt-4o-mini')
@@ -39,7 +39,7 @@ class PolicyNetworkEvaluator:
     def gpt_solve_with_examples(self, problem: Dict[str, Any], examples: List[Dict[str, Any]], 
                                dataset_name: str) -> Tuple[bool, float]:
         """
-        Use GPT to solve problem với given examples using FPP template và return success + answer
+        Use GPT to solve problem with given examples using FPP template and return success + answer
         
         Args:
             problem: Problem dict with context, question, answer
@@ -150,7 +150,7 @@ class PolicyNetworkEvaluator:
             k: Number of examples to select
             
         Returns:
-            Dict with accuracy metrics và improvement
+            Dict with accuracy metrics and improvement
         """
         logger.info(f"Evaluating {dataset_name}: Policy vs Random ({n_trials} trials)")
         
@@ -161,7 +161,7 @@ class PolicyNetworkEvaluator:
         
         for trial in range(n_trials):
             try:
-                # Sample problem và candidate pool
+                # Sample problem and candidate pool
                 problem = random.choice(dataset_candidates)
                 available_candidates = [x for x in dataset_candidates if x != problem]
                 
@@ -220,9 +220,9 @@ class PolicyNetworkEvaluator:
         Analyze quality of Policy Network selections
         
         Returns:
-            Dict với relevance, diversity, và consistency metrics
+            Dict with relevance, diversity, and consistency metrics
         """
-        logger.info(f"Analyzing selection quality ({n_samples} samples)")
+        logger.info(f"Analyzing selection quality with {n_samples} samples")
         
         relevance_scores = []
         diversity_scores = []
@@ -230,7 +230,7 @@ class PolicyNetworkEvaluator:
         
         for i in range(n_samples):
             try:
-                # Sample problem và candidate pool
+                # Sample problem and candidate pool
                 problem = random.choice(dataset_candidates)
                 available_candidates = [x for x in dataset_candidates if x != problem]
                 candidate_pool = random.sample(available_candidates, pool_size)
@@ -305,7 +305,7 @@ class PolicyNetworkEvaluator:
                                dataset_name: str,
                                n_trials: int = 50) -> Dict[str, Any]:
         """
-        Run comprehensive evaluation combining accuracy và quality metrics
+        Run comprehensive evaluation combining accuracy and quality metrics
         """
         logger.info(f"Running comprehensive evaluation for {dataset_name}")
         

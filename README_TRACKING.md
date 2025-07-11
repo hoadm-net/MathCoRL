@@ -1,27 +1,27 @@
 # API Usage Tracking in MathCoRL
 
-MathCoRL bây giờ đã được nâng cấp với hệ thống tracking API usage toàn diện, cho phép theo dõi và tối ưa hóa chi phí trong nghiên cứu mathematical reasoning:
+MathCoRL has now been upgraded with a comprehensive API usage tracking system, allowing monitoring and optimization of costs in mathematical reasoning research:
 
-- **Input tokens count** - Số tokens gửi đi (**100% chính xác** từ API metadata)
-- **Output tokens count** - Số tokens nhận về (**100% chính xác** từ API metadata)
-- **Request cost** - Chi phí cho từng request (**100% chính xác** dựa trên actual tokens)
-- **Execution time** - Thời gian thực hiện request (**millisecond precision**)
-- **Method comparison** - So sánh hiệu quả giữa các phương pháp
-- **Visual analytics** - Biểu đồ trực quan cho phân tích chi phí và hiệu suất
+- **Input tokens count** - Number of tokens sent (**100% accurate** from API metadata)
+- **Output tokens count** - Number of tokens received (**100% accurate** from API metadata)
+- **Request cost** - Cost for each request (**100% accurate** based on actual tokens)
+- **Execution time** - Request execution time (**millisecond precision**)
+- **Method comparison** - Compare efficiency between methods
+- **Visual analytics** - Visual charts for cost and performance analysis
 
 ### 🎯 **Key Features**
-- ✅ **100% Accurate Token Counting** - Sử dụng official OpenAI API response metadata
-- ✅ **Real-time Cost Tracking** - Tính toán chi phí chính xác theo pricing mới nhất
-- ✅ **Comprehensive Logging** - Log tất cả API calls với full metadata
+- ✅ **100% Accurate Token Counting** - Use official OpenAI API response metadata
+- ✅ **Real-time Cost Tracking** - Calculate costs accurately according to latest pricing
+- ✅ **Comprehensive Logging** - Log all API calls with full metadata
 - ✅ **Multi-method Support** - Track FPP, CoT, PAL, PoT, Zero-Shot, ICRL, Policy Network
-- ✅ **Export & Analysis** - Export data ra CSV/JSON cho analysis
-- ✅ **Visual Charts** - Tạo biểu đồ so sánh methods và phân tích cost
-- ✅ **Cost Optimization** - Recommendations cho việc tối ưa hóa budget
+- ✅ **Export & Analysis** - Export data to CSV/JSON for analysis
+- ✅ **Visual Charts** - Create charts comparing methods and analyzing costs
+- ✅ **Cost Optimization** - Recommendations for budget optimization
 
-## 🚀 Tính năng
+## 🚀 Features
 
 ### Automatic Tracking
-Tất cả API calls được tự động track cho các phương pháp:
+All API calls are automatically tracked for methods:
 - **FPP** (Function Prototype Prompting)
 - **CoT** (Chain-of-Thought)
 - **PAL** (Program-aided Language Models)
@@ -31,7 +31,7 @@ Tất cả API calls được tự động track cho các phương pháp:
 - **Embedding calls** (text-embedding-3-small)
 
 ### Detailed Metrics
-Mỗi API call được log với thông tin:
+Each API call is logged with the following information:
 ```json
 {
   "timestamp": "2025-07-10T16:08:13.701495",
@@ -54,7 +54,7 @@ Mỗi API call được log với thông tin:
 ```
 
 ### Cost Calculation
-Hỗ trợ pricing tự động cho tất cả OpenAI models:
+Supports automatic pricing for all OpenAI models:
 - **GPT-4o-mini**: $0.00015/$0.0006 per 1K tokens (default - best cost/performance)
 - **GPT-4o**: $0.0025/$0.01 per 1K tokens
 - **GPT-4-turbo**: $0.01/$0.03 per 1K tokens
@@ -63,7 +63,7 @@ Hỗ trợ pricing tự động cho tất cả OpenAI models:
 - **text-embedding-3-large**: $0.00013 per 1K tokens
 
 ### Method Efficiency Tracking
-Track và so sánh hiệu quả giữa các methods:
+Track and compare efficiency between methods:
 ```json
 {
   "method_comparison": {
@@ -164,14 +164,14 @@ tracker.set_tokens(input_tokens, output_tokens)
 
 ### Verification Example
 ```python
-# Test để verify token counting accuracy
+# Test to verify token counting accuracy
 from langchain_openai import ChatOpenAI
 from langchain.schema import HumanMessage
 
 llm = ChatOpenAI(model_name='gpt-4o-mini')
 response = llm.invoke([HumanMessage(content='Calculate: 15 + 27')])
 
-# Kiểm tra metadata
+# Check metadata
 print(response.response_metadata['token_usage'])
 # Output: {'prompt_tokens': 16, 'completion_tokens': 8, 'total_tokens': 24}
 
@@ -182,35 +182,35 @@ total_cost = input_cost + output_cost  # $0.000007
 ```
 
 ### Token Extraction
-Tracking tự động extract token counts với **độ chính xác 100%** từ:
+Automatic token counting with **100% accuracy** from:
 
 #### 1. **API Response Metadata** (Primary - 100% Accurate)
 ```python
-# LangChain tự động extract từ OpenAI API response
+# LangChain automatically extracts from OpenAI API response
 response_metadata.token_usage = {
-    'prompt_tokens': 16,      # Input tokens (chính xác 100%)
-    'completion_tokens': 8,   # Output tokens (chính xác 100%)
-    'total_tokens': 24        # Tổng tokens
+    'prompt_tokens': 16,      # Input tokens (accurate 100%)
+    'completion_tokens': 8,   # Output tokens (accurate 100%)
+    'total_tokens': 24        # Total tokens
 }
 ```
 
 #### 2. **Pre-estimation** (Before API Call)
 ```python
-# Ước tính input tokens trước khi gọi API
+# Estimate input tokens before calling API
 input_tokens = len(prompt) // 4  # ~4 characters per token
 ```
 
 #### 3. **Fallback Estimation** (Rare Cases)
 ```python
-# Chỉ dùng khi API không trả metadata (hiếm khi xảy ra)
+# Only use when API doesn't return metadata (rarely occurs)
 output_tokens = len(response.content) // 4
 ```
 
 #### 4. **Accuracy Guarantee**
-- ✅ **Input tokens**: 100% chính xác từ `prompt_tokens`
-- ✅ **Output tokens**: 100% chính xác từ `completion_tokens`  
-- ✅ **Cost calculation**: 100% chính xác dựa trên actual tokens
-- ⚠️ **Estimation**: Chỉ dùng cho preview/fallback (~75% accuracy)
+- ✅ **Input tokens**: 100% accurate from `prompt_tokens`
+- ✅ **Output tokens**: 100% accurate from `completion_tokens`  
+- ✅ **Cost calculation**: 100% accurate based on actual tokens
+- ⚠️ **Estimation**: Only used for preview/fallback (~75% accuracy)
 
 ## 📊 Visual Analytics & Charts
 
@@ -232,24 +232,24 @@ python mathcorl.py chart --type all --hours 12 --save
 ### Available Chart Types
 
 #### 1. **Method Comparison Chart**
-- So sánh **Input Tokens**, **Output Tokens**, **Execution Time**, **Cost** giữa các phương pháp
-- Hiển thị trung bình của từng metric
-- Dễ dàng nhận biết phương pháp nào hiệu quả nhất
+- Compare **Input Tokens**, **Output Tokens**, **Execution Time**, **Cost** between methods
+- Display average of each metric
+- Easily identify which method is most effective
 
 #### 2. **Cost Analysis Chart**
-- **Pie Chart**: Phân bổ chi phí theo từng phương pháp
-- **Scatter Plot**: Mối quan hệ giữa số tokens và chi phí
-- Giúp tối ưa hóa budget
+- **Pie Chart**: Cost distribution by each method
+- **Scatter Plot**: Relationship between token count and cost
+- Help optimize budget
 
 #### 3. **Time Analysis Chart**
-- **Box Plot**: Phân bố thời gian thực hiện theo phương pháp
-- **Scatter Plot**: Mối quan hệ giữa tokens và thời gian
-- Phát hiện bottlenecks
+- **Box Plot**: Execution time distribution by method
+- **Scatter Plot**: Relationship between tokens and time
+- Identify bottlenecks
 
 #### 4. **Token Analysis Chart**
-- **Stacked Bar**: Input vs Output tokens theo phương pháp
-- **Token Efficiency**: Tỷ lệ Output/Input tokens
-- **Distribution**: Phân bố tokens của từng phương pháp
+- **Stacked Bar**: Input vs Output tokens by method
+- **Token Efficiency**: Output/Input token ratio
+- **Distribution**: Token distribution of each method
 
 ### Sample Chart Analysis Structure
 Charts provide insights into:
@@ -262,11 +262,11 @@ Charts provide insights into:
 
 ### Storage Location
 - **Default path**: `logs/api_usage.jsonl`
-- **Format**: JSON Lines (một JSON object per line)
+- **Format**: JSON Lines (one JSON object per line)
 - **Encoding**: UTF-8
 - **Backup**: Automatic backup when clearing logs
 
-### Log Rotation và Management
+### Log Rotation and Management
 ```python
 import os
 from datetime import datetime
@@ -397,7 +397,7 @@ python train_policy.py --dataset TAT-QA --epochs 3                 # One-time tr
 python run_comparison.py --dataset TAT-QA --samples 150            # Batch evaluation
 ```
 
-## 🛠️ Integration với Research Workflow
+## 🛠️ Integration with Research Workflow
 
 ### Step 1: Pre-Research Cost Estimation
 ```bash
@@ -426,7 +426,7 @@ python mathcorl.py chart --type all --save
 python analyze_costs.py --input tracking_export.json --output cost_report.pdf
 ```
 
-### Integration với Publication Pipeline
+### Integration with Publication Pipeline
 ```python
 # Include cost data in research documentation
 def generate_cost_summary(tracking_data):
@@ -445,4 +445,4 @@ print(f"Cost difference: +W% for -V% accuracy vs. baseline")
 
 ---
 
-**💰 Smart Cost Management**: Tracking giúp researchers tối ưa hóa budget, so sánh hiệu quả methods, và đưa ra quyết định thông minh về API usage trong mathematical reasoning research! 
+**💰 Smart Cost Management**: Tracking helps researchers optimize budget, compare method efficiency, and make informed decisions about API usage in mathematical reasoning research! 

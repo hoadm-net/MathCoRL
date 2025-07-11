@@ -575,7 +575,7 @@ class CandidateGenerator:
                     continue
                 explanation = item[field_mapping["explanation"]]
             elif dataset_name == "FinQA":
-                # Pre-validate FinQA item để skip problematic ones early
+                # Pre-validate FinQA item to skip problematic ones early
                 if not self.is_valid_finqa_item(item):
                     question_preview = self.get_nested_field(item, 'qa.question') or "Unknown question"
                     logger.debug(f"Skipping invalid FinQA item: {str(question_preview)[:50]}...")
@@ -862,7 +862,7 @@ class CandidateGenerator:
             if not text_array:
                 return ""
             
-            # Enhanced filtering để remove noise elements
+            # Enhanced filtering to remove noise elements
             filtered_texts = []
             for text in text_array:
                 cleaned_text = text.strip()
@@ -875,7 +875,7 @@ class CandidateGenerator:
                 if all(c == '.' for c in cleaned_text):
                     continue
                 
-                # Skip strings with only dots và whitespace
+                # Skip strings with only dots and whitespace
                 if all(c in '. \t\n\r' for c in cleaned_text):
                     continue
                 
@@ -883,7 +883,7 @@ class CandidateGenerator:
                 if len(cleaned_text) < 2 and cleaned_text not in ['%', '$', '€', '£']:
                     continue
                 
-                # Skip strings starting with dots và ending with dots only
+                # Skip strings starting with dots and ending with dots only
                 if cleaned_text.startswith('.') and len(cleaned_text.replace('.', '').strip()) == 0:
                     continue
                 
@@ -1049,7 +1049,7 @@ class CandidateGenerator:
             answer_str = answer_str.replace("%", "")  # Remove percentages
             answer_str = answer_str.replace("(", "-").replace(")", "")  # Handle negatives
             
-            # Enhanced million/billion parsing với space handling
+            # Enhanced million/billion parsing with space handling
             import re
             
             # Handle "X million" or "X.Y million" patterns
@@ -1070,7 +1070,7 @@ class CandidateGenerator:
                 answer_str = answer_str.lower().replace("million", "000000")
                 answer_str = answer_str.replace("billion", "000000000")
             
-            # Remove any remaining non-numeric characters except decimal point và minus
+            # Remove any remaining non-numeric characters except decimal point and minus
             answer_str = re.sub(r'[^\d\.\-]', '', answer_str)
             
             # Final validation
