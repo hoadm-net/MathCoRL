@@ -52,7 +52,7 @@ def setup_logging(level: str = "INFO"):
     )
 
 
-def interactive_mode():
+def interactive_mode(provider: str = None):
     """Interactive mode for solving problems."""
     print("🚀 MathCoRL - Interactive Mathematical Problem Solver")
     print("=" * 60)
@@ -69,27 +69,27 @@ def interactive_mode():
         method_choice = input("Select method (1 for FPP, 2 for CoT, 3 for PoT, 4 for Zero-Shot, 5 for PAL): ").strip()
         if method_choice == '1':
             method = 'fpp'
-            solver = FunctionPrototypePrompting()
+            solver = FunctionPrototypePrompting(provider=provider)
             print("✅ FPP (Function Prototype Prompting) selected!\n")
             break
         elif method_choice == '2':
             method = 'cot'
-            solver = ChainOfThoughtPrompting()
+            solver = ChainOfThoughtPrompting(provider=provider)
             print("✅ CoT (Chain-of-Thought) selected!\n")
             break
         elif method_choice == '3':
             method = 'pot'
-            solver = ProgramOfThoughtsPrompting()
+            solver = ProgramOfThoughtsPrompting(provider=provider)
             print("✅ PoT (Program of Thoughts) selected!\n")
             break
         elif method_choice == '4':
             method = 'zero_shot'
-            solver = ZeroShotPrompting()
+            solver = ZeroShotPrompting(provider=provider)
             print("✅ Zero-Shot selected!\n")
             break
         elif method_choice == '5':
             method = 'pal'
-            solver = ProgramAidedLanguageModel()
+            solver = ProgramAidedLanguageModel(provider=provider)
             print("✅ PAL (Program-aided Language Models) selected!\n")
             break
         else:
@@ -117,23 +117,23 @@ def interactive_mode():
                 choice = input("Select method (1, 2, 3, 4, or 5): ").strip()
                 if choice == '1':
                     method = 'fpp'
-                    solver = FunctionPrototypePrompting()
+                    solver = FunctionPrototypePrompting(provider=provider)
                     print("🔄 Switched to FPP (Function Prototype Prompting)")
                 elif choice == '2':
                     method = 'cot'
-                    solver = ChainOfThoughtPrompting()
+                    solver = ChainOfThoughtPrompting(provider=provider)
                     print("🔄 Switched to CoT (Chain-of-Thought)")
                 elif choice == '3':
                     method = 'pot'
-                    solver = ProgramOfThoughtsPrompting()
+                    solver = ProgramOfThoughtsPrompting(provider=provider)
                     print("🔄 Switched to PoT (Program of Thoughts)")
                 elif choice == '4':
                     method = 'zero_shot'
-                    solver = ZeroShotPrompting()
+                    solver = ZeroShotPrompting(provider=provider)
                     print("🔄 Switched to Zero-Shot")
                 elif choice == '5':
                     method = 'pal'
-                    solver = ProgramAidedLanguageModel()
+                    solver = ProgramAidedLanguageModel(provider=provider)
                     print("🔄 Switched to PAL (Program-aided Language Models)")
                 else:
                     print("❌ Invalid choice. Staying with current method.")
@@ -232,7 +232,7 @@ Commands:
     """)
 
 
-def solve_single(method: str, question: str, context: str = "", show_code: bool = True) -> Dict[str, Any]:
+def solve_single(method: str, question: str, context: str = "", show_code: bool = True, provider: str = None) -> Dict[str, Any]:
     """
     Solve a single problem using the specified method.
     
@@ -241,13 +241,14 @@ def solve_single(method: str, question: str, context: str = "", show_code: bool 
         question: Mathematical question to solve
         context: Optional context information
         show_code: Whether to display generated code (FPP, PoT, and PAL)
+        provider: LLM provider to use ('openai', 'claude', optional)
         
     Returns:
         Dictionary with results
     """
     try:
         if method.lower() == 'fpp':
-            fpp = FunctionPrototypePrompting()
+            fpp = FunctionPrototypePrompting(provider=provider)
             result = fpp.solve_detailed(question, context)
             
             if show_code and result['code']:
@@ -259,22 +260,22 @@ def solve_single(method: str, question: str, context: str = "", show_code: bool 
             return result
         
         elif method.lower() == 'cot':
-            cot = ChainOfThoughtPrompting()
+            cot = ChainOfThoughtPrompting(provider=provider)
             result = cot.solve(question, context, show_reasoning=True)
             return result
         
         elif method.lower() == 'pot':
-            pot = ProgramOfThoughtsPrompting()
+            pot = ProgramOfThoughtsPrompting(provider=provider)
             result = pot.solve(question, context, show_reasoning=True)
             return result
         
         elif method.lower() == 'zero_shot':
-            zs = ZeroShotPrompting()
+            zs = ZeroShotPrompting(provider=provider)
             result = zs.solve(question, context, show_reasoning=True)
             return result
         
         elif method.lower() == 'pal':
-            pal = ProgramAidedLanguageModel()
+            pal = ProgramAidedLanguageModel(provider=provider)
             result = pal.solve(question, context, show_reasoning=True)
             
             if show_code and result.get('code'):
@@ -297,7 +298,7 @@ def solve_single(method: str, question: str, context: str = "", show_code: bool 
 
 
 def test_method(method: str, dataset: str, limit: Optional[int] = None, 
-               verbose: bool = False, output_dir: str = "results") -> Dict[str, Any]:
+               verbose: bool = False, output_dir: str = "results", provider: str = None) -> Dict[str, Any]:
     """
     Test a method on a dataset.
     
@@ -307,24 +308,25 @@ def test_method(method: str, dataset: str, limit: Optional[int] = None,
         limit: Maximum number of samples
         verbose: Show detailed output
         output_dir: Directory to save results
+        provider: LLM provider to use ('openai', 'claude', optional)
         
     Returns:
         Test results
     """
     if method.lower() == 'fpp':
-        solver = create_fpp_solver()
+        solver = create_fpp_solver(provider)
         runner = TestRunner('FPP', solver)
     elif method.lower() == 'cot':
-        solver = create_cot_solver()
+        solver = create_cot_solver(provider)
         runner = TestRunner('CoT', solver)
     elif method.lower() == 'pot':
-        solver = create_pot_solver()
+        solver = create_pot_solver(provider)
         runner = TestRunner('PoT', solver)
     elif method.lower() == 'zero_shot':
-        solver = create_zero_shot_solver()
+        solver = create_zero_shot_solver(provider)
         runner = TestRunner('Zero-Shot', solver)
     elif method.lower() == 'pal':
-        solver = create_pal_solver()
+        solver = create_pal_solver(provider)
         runner = TestRunner('PAL', solver)
     else:
         raise ValueError(f"Unknown method: {method}. Use 'fpp', 'cot', 'pot', 'zero_shot', or 'pal'")
@@ -781,6 +783,8 @@ def main():
     
     # Interactive mode
     interactive_parser = subparsers.add_parser('interactive', help='Interactive problem solving')
+    interactive_parser.add_argument('--provider', '-p', choices=['openai', 'claude'], 
+                                   help='LLM provider to use (defaults to config)')
     
     # Single problem solving
     solve_parser = subparsers.add_parser('solve', help='Solve a single problem')
@@ -790,6 +794,8 @@ def main():
                              help='Mathematical question to solve')
     solve_parser.add_argument('--context', '-c', default='',
                              help='Optional context for the problem')
+    solve_parser.add_argument('--provider', '-p', choices=['openai', 'claude'], 
+                             help='LLM provider to use (defaults to config)')
     solve_parser.add_argument('--no-code', action='store_true',
                              help='Hide generated code (FPP and PoT)')
     
@@ -801,6 +807,8 @@ def main():
                             help='Dataset to test on')
     test_parser.add_argument('--limit', '-l', type=int,
                             help='Maximum number of samples to test')
+    test_parser.add_argument('--provider', '-p', choices=['openai', 'claude'], 
+                            help='LLM provider to use (defaults to config)')
     test_parser.add_argument('--verbose', '-v', action='store_true',
                             help='Show detailed output')
     test_parser.add_argument('--output', '-o', default='results',
@@ -849,11 +857,13 @@ def main():
     
     try:
         if args.command == 'interactive':
-            interactive_mode()
+            provider = getattr(args, 'provider', None)
+            interactive_mode(provider)
         
         elif args.command == 'solve':
+            provider = getattr(args, 'provider', None)
             result = solve_single(args.method, args.question, args.context, 
-                                not args.no_code)
+                                not args.no_code, provider)
             # Check if we have a valid result (works for all methods)
             if result.get('result') is not None:
                 print(f"✅ Answer: {result['result']}")
@@ -878,8 +888,9 @@ def main():
                 pass  # Don't fail if tracking unavailable
         
         elif args.command == 'test':
+            provider = getattr(args, 'provider', None)
             test_method(args.method, args.dataset, args.limit, 
-                       args.verbose, args.output)
+                       args.verbose, args.output, provider)
         
         elif args.command == 'compare':
             compare_methods(args.dataset, args.limit)

@@ -23,25 +23,28 @@ class ChainOfThoughtPrompting:
     showing its reasoning process before arriving at the final answer.
     """
     
-    def __init__(self, model_name: str = None, temperature: float = None):
+    def __init__(self, model_name: str = None, temperature: float = None, provider: str = None):
         """
         Initialize the Chain-of-Thought prompting system.
         
         Args:
-            model_name: The OpenAI model to use (defaults to config value)
+            model_name: The model to use (defaults to config value based on provider)
             temperature: Temperature for response generation (defaults to config value)
+            provider: LLM provider ('openai', 'claude', optional - will use config default)
         """
-        from .config import load_config
+        from .config import load_config, create_llm_client, get_current_model_name
         config = load_config()
         
-        self.model_name = model_name or config['model']
+        self.provider = provider or config['provider']
+        self.model_name = model_name or get_current_model_name(self.provider)
         self.temperature = temperature if temperature is not None else config['temperature']
         
         # Setup LangSmith if configured
         self._setup_langsmith()
         
-        self.llm = ChatOpenAI(
-            model_name=self.model_name,
+        self.llm = create_llm_client(
+            provider=self.provider,
+            model=self.model_name,
             temperature=self.temperature
         )
         
@@ -128,13 +131,13 @@ Let me work through this:"""
                 print(f"🤖 CoT Prompt:\n{prompt}\n")
             
             # Get response from LLM with tracking
-            from .tracking import track_api_call, extract_tokens_from_response, count_tokens_openai
+            from .tracking import track_api_call, extract_tokens_from_response, count_tokens_universal
             
             with track_api_call("CoT", self.model_name, question, context) as tracker:
                 messages = [HumanMessage(content=prompt)]
                 
                 # Estimate input tokens
-                input_tokens = count_tokens_openai(prompt, self.model_name)
+                input_tokens = count_tokens_universal(prompt, self.model_name)
                 
                 response = self.llm.invoke(messages)
                 reasoning = response.content

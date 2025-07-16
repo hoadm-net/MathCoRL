@@ -35,30 +35,36 @@ class FunctionPrototypePrompting:
                  api_key: Optional[str] = None, 
                  model: Optional[str] = None,
                  temperature: float = 0.0,
-                 max_tokens: int = 1000):
+                 max_tokens: int = 1000,
+                 provider: Optional[str] = None):
         """
-        Initialize FPP with LangChain OpenAI.
+        Initialize FPP with LangChain LLM (supports OpenAI and Claude).
         
         Args:
-            api_key: OpenAI API key (optional, will use environment variable)
-            model: Model name (default: gpt-4o-mini)
+            api_key: API key (optional, will use environment variable)
+            model: Model name (optional, will use config default)
             temperature: Sampling temperature (default: 0.0)
             max_tokens: Maximum tokens in response (default: 1000)
+            provider: LLM provider ('openai', 'claude', optional - will use config default)
         """
-        # Setup API key
-        self.api_key = api_key or os.getenv("OPENAI_API_KEY")
-        if not self.api_key:
-            raise ValueError("OpenAI API key not found. Set OPENAI_API_KEY environment variable or pass api_key parameter.")
+        from .config import load_config, create_llm_client, get_current_model_name
+        
+        # Load configuration
+        config = load_config()
+        
+        # Determine provider
+        self.provider = provider or config['provider']
         
         # Setup model parameters
-        self.model = model or os.getenv("DEFAULT_MODEL", "gpt-4o-mini")
-        self.temperature = temperature or float(os.getenv("TEMPERATURE", "0.0"))
-        self.max_tokens = max_tokens or int(os.getenv("MAX_TOKENS", "1000"))
+        self.model = model or get_current_model_name(self.provider)
+        self.temperature = temperature or config['temperature']
+        self.max_tokens = max_tokens or config['max_tokens']
         
-        # Initialize LangChain ChatOpenAI
-        self.llm = ChatOpenAI(
-            api_key=self.api_key,
+        # Initialize LangChain LLM client
+        self.llm = create_llm_client(
+            provider=self.provider,
             model=self.model,
+            api_key=api_key,
             temperature=self.temperature,
             max_tokens=self.max_tokens
         )
@@ -66,7 +72,7 @@ class FunctionPrototypePrompting:
         # Setup LangSmith if configured
         self._setup_langsmith()
         
-        logger.info(f"FPP initialized with model: {self.model}")
+        logger.info(f"FPP initialized with {self.provider} provider, model: {self.model}")
     
     def _setup_langsmith(self):
         """Setup LangSmith tracing if configured."""
@@ -200,7 +206,7 @@ class FunctionPrototypePrompting:
     
     def _call_llm(self, prompt: str, question: str = "", context: str = "") -> str:
         """
-        Call LLM API to generate code with tracking.
+        Call LLM API to generate code with tracking (supports OpenAI and Claude).
         
         Args:
             prompt: Formatted prompt string
@@ -210,7 +216,7 @@ class FunctionPrototypePrompting:
         Returns:
             Generated code or empty string if failed
         """
-        from .tracking import track_api_call, extract_tokens_from_response, count_tokens_openai
+        from .tracking import track_api_call, extract_tokens_from_response, count_tokens_universal
         
         try:
             with track_api_call("FPP", self.model, question, context) as tracker:
@@ -219,9 +225,9 @@ class FunctionPrototypePrompting:
                     HumanMessage(content=prompt)
                 ]
                 
-                # Estimate input tokens
+                # Estimate input tokens using universal counter
                 system_content = "You are an expert Python programmer specialized in mathematical problem solving."
-                input_tokens = count_tokens_openai(system_content + prompt, self.model)
+                input_tokens = count_tokens_universal(system_content + prompt, self.model)
                 
                 response = self.llm.invoke(messages)
                 
@@ -240,20 +246,21 @@ class FunctionPrototypePrompting:
 
 
 # Simple function interface for quick usage
-def solve_math_problem(question: str, context: str = "", **kwargs) -> Union[float, int, None]:
+def solve_math_problem(question: str, context: str = "", provider: str = None, **kwargs) -> Union[float, int, None]:
     """
     Simple function to solve a math problem using FPP.
     
     Args:
         question: Mathematical question to solve
         context: Optional context information
+        provider: LLM provider ('openai', 'claude', optional - will use config default)
         **kwargs: Additional arguments for FPP initialization
         
     Returns:
         Numerical result or None if solving failed
     """
     try:
-        fpp = FunctionPrototypePrompting(**kwargs)
+        fpp = FunctionPrototypePrompting(provider=provider, **kwargs)
         return fpp.solve(question, context)
     except Exception as e:
         logger.error(f"Error in solve_math_problem(): {e}")

@@ -58,12 +58,12 @@ class PolicyNetworkEvaluator:
             prompt = create_policy_evaluation_prompt(question, examples, context)
 
             # Call GPT with tracking
-            from ..tracking import track_api_call, count_tokens_openai
+            from ..tracking import track_api_call, count_tokens_universal
             import time
             
             with track_api_call("ICRL-Evaluator", self.model, question, context) as tracker:
                 # Estimate input tokens
-                input_tokens = count_tokens_openai(prompt, self.model)
+                input_tokens = count_tokens_universal(prompt, self.model)
                 
                 start_time = time.time()
                 response = self.openai_client.chat.completions.create(
@@ -80,7 +80,7 @@ class PolicyNetworkEvaluator:
                     output_tokens = usage.completion_tokens
                 else:
                     actual_input_tokens = input_tokens
-                    output_tokens = count_tokens_openai(response.choices[0].message.content, self.model)
+                    output_tokens = count_tokens_universal(response.choices[0].message.content, self.model)
                 
                 tracker.set_tokens(actual_input_tokens, output_tokens)
             

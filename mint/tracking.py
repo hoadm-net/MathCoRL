@@ -46,6 +46,39 @@ OPENAI_PRICING = {
     "text-embedding-ada-002": {"input": 0.0001, "output": 0.0},
 }
 
+# Claude pricing (per 1000 tokens) - Updated January 2025
+# Based on official Anthropic pricing as of January 2025
+# Source: https://www.anthropic.com/pricing
+CLAUDE_PRICING = {
+    # Claude 3.5 Sonnet (Latest)
+    "claude-3-5-sonnet-20241022": {"input": 0.003, "output": 0.015},  # Official: $3.00/$15.00 per 1M tokens
+    "claude-3-5-sonnet-20240620": {"input": 0.003, "output": 0.015},  # Official: $3.00/$15.00 per 1M tokens
+    
+    # Claude 3.5 Haiku
+    "claude-3-5-haiku-20241022": {"input": 0.001, "output": 0.005},  # Official: $1.00/$5.00 per 1M tokens
+    
+    # Claude 3 Opus
+    "claude-3-opus-20240229": {"input": 0.015, "output": 0.075},  # Official: $15.00/$75.00 per 1M tokens
+    
+    # Claude 3 Sonnet
+    "claude-3-sonnet-20240229": {"input": 0.003, "output": 0.015},  # Official: $3.00/$15.00 per 1M tokens
+    
+    # Claude 3 Haiku
+    "claude-3-haiku-20240307": {"input": 0.00025, "output": 0.00125},  # Official: $0.25/$1.25 per 1M tokens
+    
+    # Claude 2.1
+    "claude-2.1": {"input": 0.008, "output": 0.024},  # Official: $8.00/$24.00 per 1M tokens
+    
+    # Claude 2.0
+    "claude-2.0": {"input": 0.008, "output": 0.024},  # Official: $8.00/$24.00 per 1M tokens
+    
+    # Claude Instant
+    "claude-instant-1.2": {"input": 0.0008, "output": 0.0024},  # Official: $0.80/$2.40 per 1M tokens
+}
+
+# Combined pricing dictionary for easy lookup
+MODEL_PRICING = {**OPENAI_PRICING, **CLAUDE_PRICING}
+
 
 @dataclass
 class APIUsageLog:
@@ -96,7 +129,7 @@ class APITracker:
     
     def calculate_cost(self, model: str, input_tokens: int, output_tokens: int) -> tuple[float, float, float]:
         """
-        Calculate cost for API usage.
+        Calculate cost for API usage for both OpenAI and Claude models.
         
         Args:
             model: Model name
@@ -109,7 +142,7 @@ class APITracker:
         # Normalize model name for pricing lookup
         model_key = model.lower()
         
-        # Handle model name variations
+        # Handle OpenAI model name variations
         if "gpt-4.1-nano" in model_key:
             model_key = "gpt-4.1-nano"
         elif "gpt-4.1-mini" in model_key:
@@ -138,13 +171,32 @@ class APITracker:
             model_key = "text-embedding-3-large"
         elif "text-embedding-ada-002" in model_key:
             model_key = "text-embedding-ada-002"
+        # Handle Claude model name variations
+        elif "claude-3-5-sonnet-20241022" in model_key:
+            model_key = "claude-3-5-sonnet-20241022"
+        elif "claude-3-5-sonnet-20240620" in model_key:
+            model_key = "claude-3-5-sonnet-20240620"
+        elif "claude-3-5-haiku-20241022" in model_key:
+            model_key = "claude-3-5-haiku-20241022"
+        elif "claude-3-opus-20240229" in model_key:
+            model_key = "claude-3-opus-20240229"
+        elif "claude-3-sonnet-20240229" in model_key:
+            model_key = "claude-3-sonnet-20240229"
+        elif "claude-3-haiku-20240307" in model_key:
+            model_key = "claude-3-haiku-20240307"
+        elif "claude-2.1" in model_key:
+            model_key = "claude-2.1"
+        elif "claude-2.0" in model_key:
+            model_key = "claude-2.0"
+        elif "claude-instant-1.2" in model_key:
+            model_key = "claude-instant-1.2"
         
-        # Get pricing
-        if model_key not in OPENAI_PRICING:
+        # Get pricing from combined pricing dictionary
+        if model_key not in MODEL_PRICING:
             logger.warning(f"Pricing not found for model: {model}. Using gpt-4o-mini pricing as fallback.")
             model_key = "gpt-4o-mini"
         
-        pricing = OPENAI_PRICING[model_key]
+        pricing = MODEL_PRICING[model_key]
         
         # Calculate costs (pricing is per 1000 tokens)
         input_cost = (input_tokens / 1000) * pricing["input"]
@@ -392,9 +444,40 @@ def count_tokens_openai(text: str, model: str = "gpt-4o-mini") -> int:
     return len(text) // 4
 
 
+def count_tokens_claude(text: str, model: str = "claude-3-5-sonnet-20241022") -> int:
+    """
+    Estimate token count for Claude models.
+    
+    This is a rough estimation based on Claude's tokenization.
+    Claude uses a similar tokenization to OpenAI models.
+    """
+    # Rough estimation: ~4 characters per token for most models
+    # Claude tends to be slightly more efficient, so we use the same ratio
+    return len(text) // 4
+
+
+def count_tokens_universal(text: str, model: str) -> int:
+    """
+    Universal token counter that works for both OpenAI and Claude models.
+    
+    Args:
+        text: Text to count tokens for
+        model: Model name (determines which counting method to use)
+        
+    Returns:
+        Estimated token count
+    """
+    model_lower = model.lower()
+    
+    if "claude" in model_lower:
+        return count_tokens_claude(text, model)
+    else:
+        return count_tokens_openai(text, model)
+
+
 def extract_tokens_from_response(response) -> tuple[int, int]:
     """
-    Extract token counts from LangChain response.
+    Extract token counts from LangChain response (supports both OpenAI and Claude).
     
     Args:
         response: LangChain response object
@@ -403,14 +486,26 @@ def extract_tokens_from_response(response) -> tuple[int, int]:
         Tuple of (input_tokens, output_tokens)
     """
     try:
-        # Check if response has usage information
+        # Check if response has usage information (OpenAI format)
         if hasattr(response, 'response_metadata') and 'token_usage' in response.response_metadata:
             usage = response.response_metadata['token_usage']
             return usage.get('prompt_tokens', 0), usage.get('completion_tokens', 0)
         
-        # Fallback: estimate tokens
-        if hasattr(response, 'content'):
-            output_tokens = count_tokens_openai(response.content)
+        # Check for Claude format (Anthropic)
+        if hasattr(response, 'response_metadata') and 'usage' in response.response_metadata:
+            usage = response.response_metadata['usage']
+            input_tokens = usage.get('input_tokens', 0)
+            output_tokens = usage.get('output_tokens', 0)
+            return input_tokens, output_tokens
+        
+        # Fallback: estimate tokens based on content
+        if hasattr(response, 'content') and response.content:
+            # Try to determine model from response metadata
+            model = "unknown"
+            if hasattr(response, 'response_metadata'):
+                model = response.response_metadata.get('model', 'unknown')
+            
+            output_tokens = count_tokens_universal(response.content, model)
             return 0, output_tokens  # Can't get input tokens without prompt
         
         return 0, 0

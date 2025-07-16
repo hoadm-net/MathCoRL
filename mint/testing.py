@@ -289,46 +289,46 @@ class TestRunner:
         return comparison
 
 
-def create_fpp_solver():
+def create_fpp_solver(provider: str = None):
     """Create FPP solver function."""
     def solve_fpp(question: str, context: str = "") -> Dict[str, Any]:
         from .core import FunctionPrototypePrompting
-        fpp = FunctionPrototypePrompting()
+        fpp = FunctionPrototypePrompting(provider=provider)
         return fpp.solve_detailed(question, context)
     return solve_fpp
 
 
-def create_cot_solver():
+def create_cot_solver(provider: str = None):
     """Create CoT solver function."""
     def solve_cot(question: str, context: str = "") -> Dict[str, Any]:
         from .cot import ChainOfThoughtPrompting
-        cot = ChainOfThoughtPrompting()
+        cot = ChainOfThoughtPrompting(provider=provider)
         return cot.solve_silent(question, context)
     return solve_cot
 
 
-def create_pot_solver():
+def create_pot_solver(provider: str = None):
     """Create PoT (Program of Thoughts) solver function."""
     def solve_pot(question: str, context: str = "") -> Dict[str, Any]:
         from .pot import ProgramOfThoughtsPrompting
-        pot = ProgramOfThoughtsPrompting()
+        pot = ProgramOfThoughtsPrompting(provider=provider)
         return pot.solve_silent(question, context)
     return solve_pot
 
 
-def create_zero_shot_solver():
+def create_zero_shot_solver(provider: str = None):
     """Create Zero-Shot solver function."""
     def solve_zero_shot(question: str, context: str = "") -> Dict[str, Any]:
         from .zero_shot import ZeroShotPrompting
-        zs = ZeroShotPrompting()
+        zs = ZeroShotPrompting(provider=provider)
         return zs.solve_silent(question, context)
     return solve_zero_shot
 
 
-def create_pal_solver():
+def create_pal_solver(provider: str = None):
     """Create PAL (Program-aided Language Models) solver function."""
     def solve_pal(question: str, context: str = "") -> Dict[str, Any]:
         from .pal import ProgramAidedLanguageModel
-        pal = ProgramAidedLanguageModel()
+        pal = ProgramAidedLanguageModel(provider=provider)
         return pal.solve_silent(question, context)
     return solve_pal 
