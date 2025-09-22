@@ -4,7 +4,7 @@ Unified CLI for MathCoRL - Mathematical Intelligence with Advanced Prompting Met
 
 This CLI provides a comprehensive interface for mathematical problem solving using
 Function Prototype Prompting (FPP), Chain-of-Thought (CoT), Zero-CoT, Auto-CoT, 
-Complex-CoT, and other advanced prompting methods.
+Complex-CoT, CoMAT, and other advanced prompting methods.
 
 Usage Examples:
     # Interactive mode
@@ -16,10 +16,12 @@ Usage Examples:
     python -m mint.cli solve --method zero_cot --question "Solve 3x + 5 = 20"
     python -m mint.cli solve --method auto_cot --question "Complex word problem..."
     python -m mint.cli solve --method complex_cot --question "Advanced math problem..."
+    python -m mint.cli solve --method comat --question "Symbolic reasoning problem..."
 
     # Dataset testing
     python -m mint.cli test --method fpp --dataset SVAMP --limit 50
     python -m mint.cli test --method zero_cot --dataset GSM8K --limit 100
+    python -m mint.cli test --method comat --dataset SVAMP --limit 20
 
     # Method comparison
     python -m mint.cli compare --dataset SVAMP --limit 20
@@ -43,10 +45,11 @@ from .cot import ChainOfThoughtPrompting
 from .zero_cot import ZeroShotCoTPrompting
 from .auto_cot import AutoCoTPrompting
 from .complex_cot import ComplexCoTPrompting
+from .comat import CoMATPrompting
 from .pot import ProgramOfThoughtsPrompting
 from .zero_shot import ZeroShotPrompting
 from .pal import ProgramAidedLanguageModel
-from .testing import TestRunner, DatasetLoader, create_fpp_solver, create_cot_solver, create_pot_solver, create_zero_shot_solver, create_pal_solver, create_zero_cot_solver, create_auto_cot_solver, create_complex_cot_solver
+from .testing import TestRunner, DatasetLoader, create_fpp_solver, create_cot_solver, create_pot_solver, create_zero_shot_solver, create_pal_solver, create_zero_cot_solver, create_auto_cot_solver, create_complex_cot_solver, create_comat_solver
 from .evaluation import get_tolerance_function
 from .tracking import get_tracker
 
@@ -69,14 +72,15 @@ def interactive_mode(provider: str = None):
     print("3. Zero-CoT (Zero-Shot Chain-of-Thought) - Simple 'Let's think step by step'")
     print("4. Auto-CoT (Automatic Chain-of-Thought) - Auto-generated diverse examples")
     print("5. Complex-CoT (Complex Chain-of-Thought) - Advanced multi-stage reasoning")
-    print("6. PoT (Program-of-Thoughts) - Python code generation")
-    print("7. Zero-Shot - Direct problem solving")
-    print("8. PAL (Program-Aided Language Models) - Natural language + programming")
+    print("6. CoMAT (Chain of Mathematically Annotated Thought) - Two-stage symbolic reasoning")
+    print("7. PoT (Program-of-Thoughts) - Python code generation")
+    print("8. Zero-Shot - Direct problem solving")
+    print("9. PAL (Program-Aided Language Models) - Natural language + programming")
     print("Type 'exit' to quit, 'help' for help, 'switch' to change method\n")
     
     # Choose initial method
     while True:
-        method_choice = input("Select method (1-8): ").strip()
+        method_choice = input("Select method (1-9): ").strip()
         if method_choice == '1':
             method = 'fpp'
             solver = FunctionPrototypePrompting(provider=provider)
@@ -103,16 +107,21 @@ def interactive_mode(provider: str = None):
             print("✅ Complex-CoT (Complex Chain-of-Thought) selected!\n")
             break
         elif method_choice == '6':
+            method = 'comat'
+            solver = CoMATPrompting(provider=provider)
+            print("✅ CoMAT (Chain of Mathematically Annotated Thought) selected!\n")
+            break
+        elif method_choice == '7':
             method = 'pot'
             solver = ProgramOfThoughtsPrompting(provider=provider)
             print("✅ PoT (Program of Thoughts) selected!\n")
             break
-        elif method_choice == '7':
+        elif method_choice == '8':
             method = 'zero_shot'
             solver = ZeroShotPrompting(provider=provider)
             print("✅ Zero-Shot selected!\n")
             break
-        elif method_choice == '8':
+        elif method_choice == '9':
             method = 'pal'
             solver = ProgramAidedLanguageModel(provider=provider)
             print("✅ PAL (Program-aided Language Models) selected!\n")
@@ -346,6 +355,11 @@ def solve_single(method: str, question: str, context: str = "", show_code: bool 
             result = complex_cot.solve(question, context, show_reasoning=True)
             return result
         
+        elif method.lower() == 'comat':
+            comat = CoMATPrompting(provider=provider)
+            result = comat.solve(question, context, show_reasoning=True)
+            return result
+        
         elif method.lower() == 'pot':
             pot = ProgramOfThoughtsPrompting(provider=provider)
             result = pot.solve(question, context, show_reasoning=True)
@@ -369,7 +383,7 @@ def solve_single(method: str, question: str, context: str = "", show_code: bool 
             return result
         
         else:
-            raise ValueError(f"Unknown method: {method}. Use 'fpp', 'cot', 'pot', 'zero_shot', or 'pal'")
+            raise ValueError(f"Unknown method: {method}. Use 'fpp', 'cot', 'zero_cot', 'auto_cot', 'complex_cot', 'comat', 'pot', 'zero_shot', or 'pal'")
             
     except Exception as e:
         return {
@@ -410,6 +424,9 @@ def test_method(method: str, dataset: str, limit: Optional[int] = None,
     elif method.lower() == 'complex_cot':
         solver = create_complex_cot_solver(provider)
         runner = TestRunner('Complex-CoT', solver)
+    elif method.lower() == 'comat':
+        solver = create_comat_solver(provider)
+        runner = TestRunner('CoMAT', solver)
     elif method.lower() == 'pot':
         solver = create_pot_solver(provider)
         runner = TestRunner('PoT', solver)
@@ -420,7 +437,7 @@ def test_method(method: str, dataset: str, limit: Optional[int] = None,
         solver = create_pal_solver(provider)
         runner = TestRunner('PAL', solver)
     else:
-        raise ValueError(f"Unknown method: {method}. Use 'fpp', 'cot', 'pot', 'zero_shot', or 'pal'")
+        raise ValueError(f"Unknown method: {method}. Use 'fpp', 'cot', 'zero_cot', 'auto_cot', 'complex_cot', 'comat', 'pot', 'zero_shot', or 'pal'")
     
     return runner.test_dataset(dataset, limit, verbose, output_dir)
 
@@ -879,7 +896,7 @@ def main():
     
     # Single problem solving
     solve_parser = subparsers.add_parser('solve', help='Solve a single problem')
-    solve_parser.add_argument('--method', '-m', choices=['fpp', 'cot', 'zero_cot', 'auto_cot', 'complex_cot', 'pot', 'zero_shot', 'pal'], required=True,
+    solve_parser.add_argument('--method', '-m', choices=['fpp', 'cot', 'zero_cot', 'auto_cot', 'complex_cot', 'comat', 'pot', 'zero_shot', 'pal'], required=True,
                              help='Prompting method to use')
     solve_parser.add_argument('--question', '-q', required=True,
                              help='Mathematical question to solve')
@@ -892,7 +909,7 @@ def main():
     
     # Dataset testing
     test_parser = subparsers.add_parser('test', help='Test method on dataset')
-    test_parser.add_argument('--method', '-m', choices=['fpp', 'cot', 'zero_cot', 'auto_cot', 'complex_cot', 'pot', 'zero_shot', 'pal'], required=True,
+    test_parser.add_argument('--method', '-m', choices=['fpp', 'cot', 'zero_cot', 'auto_cot', 'complex_cot', 'comat', 'pot', 'zero_shot', 'pal'], required=True,
                             help='Prompting method to use')
     test_parser.add_argument('--dataset', '-d', required=True,
                             help='Dataset to test on')

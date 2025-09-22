@@ -379,4 +379,20 @@ def create_complex_cot_solver(provider: str = None):
             'reasoning': result.get('reasoning', ''),
             'method': 'Complex-CoT'
         }
-    return solve_complex_cot 
+    return solve_complex_cot
+
+
+def create_comat_solver(provider: str = None):
+    """Create CoMAT solver function."""
+    def solve_comat(question: str, context: str = "") -> Dict[str, Any]:
+        from .comat import CoMATPrompting
+        comat = CoMATPrompting(provider=provider)
+        result = comat.solve(question, context, show_reasoning=False)
+        # Convert to standard format
+        return {
+            'result': result['answer'],
+            'success': result['success'],
+            'reasoning': result.get('reasoning', ''),
+            'method': 'CoMAT'
+        }
+    return solve_comat 
