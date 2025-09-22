@@ -31,6 +31,14 @@ class FunctionPrototypeConfig:
             'question_field': 'question',
             'context_field': 'context'
         },
+        'TAT-QA': {
+            'test_file': 'datasets/TAT-QA/test.json',
+            'original_functions': 'original',
+            'enhanced_functions': 'table',
+            'ground_truth_field': 'ground_truth',
+            'question_field': 'question',
+            'context_field': 'context'
+        },
         'TabMWP': {
             'test_file': 'datasets/TabMWP/test.json', 
             'original_functions': 'original',

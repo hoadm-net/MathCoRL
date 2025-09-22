@@ -29,6 +29,12 @@ class FunctionPrototypePrompting:
     Simple interface:
     - Input: question (str), context (str, optional)
     - Output: result (numerical answer)
+    
+    Supports ablation variants:
+    - Policy types: retrieval, random
+    - Manual prompts (no policy)
+    - Custom function prototypes
+    - Unconstrained function usage
     """
     
     def __init__(self, 
@@ -69,6 +75,14 @@ class FunctionPrototypePrompting:
             max_tokens=self.max_tokens
         )
         
+        # Ablation variant attributes
+        self._custom_prototypes = None
+        self._variant_type = "baseline"
+        self._use_policy = True
+        self._policy_type = "retrieval"
+        self._manual_prompt = False
+        self._unconstrained = False
+        
         # Setup LangSmith if configured
         self._setup_langsmith()
         
@@ -97,15 +111,20 @@ class FunctionPrototypePrompting:
             Numerical result or None if solving failed
         """
         try:
-            # Create prompt
-            prompt = create_fpp_prompt(question, context)
+            # Create prompt based on variant type
+            if self._manual_prompt or not self._use_policy:
+                prompt = self._create_manual_prompt(question, context)
+            elif self._custom_prototypes:
+                prompt = self._create_custom_prompt(question, context)
+            else:
+                prompt = create_fpp_prompt(question, context)
             
             # Generate code using LLM
             raw_code = self._call_llm(prompt, question, context)
             if not raw_code:
                 logger.error("No response received from LLM")
                 return None
-            
+
             # Clean and execute code
             cleaned_code = clean_code(raw_code)
             result, error = execute_code(cleaned_code)
@@ -113,7 +132,7 @@ class FunctionPrototypePrompting:
             if error:
                 logger.error(f"Code execution error: {error}")
                 return None
-            
+
             return result
             
         except Exception as e:
@@ -173,12 +192,20 @@ class FunctionPrototypePrompting:
             'result': None,
             'code': '',
             'error': '',
-            'success': False
+            'success': False,
+            'variant_type': getattr(self, '_variant_type', 'baseline'),
+            'policy_type': getattr(self, '_policy_type', 'retrieval'),
+            'use_policy': getattr(self, '_use_policy', True)
         }
         
         try:
-            # Create prompt
-            prompt = create_fpp_prompt(question, context)
+            # Create prompt based on variant type
+            if self._manual_prompt or not self._use_policy:
+                prompt = self._create_manual_prompt(question, context)
+            elif self._custom_prototypes:
+                prompt = self._create_custom_prompt(question, context)
+            else:
+                prompt = create_fpp_prompt(question, context)
             
             # Generate code using LLM
             raw_code = self._call_llm(prompt, question, context)
@@ -203,6 +230,59 @@ class FunctionPrototypePrompting:
             result['error'] = str(e)
         
         return result
+    
+    def _create_custom_prompt(self, question: str, context: str = "") -> str:
+        """Create custom prompt with specific function prototypes for ablation variants."""
+        if not self._custom_prototypes:
+            return create_fpp_prompt(question, context)
+        
+        # Use custom prototypes instead of standard ones
+        base_prompt = f"""You are a mathematical problem solver. Use the provided function prototypes to solve the problem.
+
+Available Function Prototypes:
+{self._custom_prototypes}
+
+Context: {context}
+Question: {question}
+
+Please write Python code using ONLY the functions defined above to solve this problem. 
+The code should end with a statement that prints or returns the final numerical answer.
+
+Code:
+```python"""
+        
+        return base_prompt
+    
+    def _create_manual_prompt(self, question: str, context: str = "") -> str:
+        """Create manual prompt without policy-based function selection."""
+        manual_prompt = f"""You are a mathematical problem solver. Solve the following problem step by step using basic Python operations.
+
+Context: {context}
+Question: {question}
+
+Please write Python code to solve this problem. You can use standard Python operations and basic mathematical functions.
+The code should end with a statement that prints or returns the final numerical answer.
+
+Code:
+```python"""
+        
+        return manual_prompt
+    
+    def _apply_policy_constraints(self, prompt: str) -> str:
+        """Apply policy-based constraints to function selection."""
+        if not self._use_policy:
+            return prompt
+        
+        if self._policy_type == "random":
+            # Add instruction for random function selection
+            constraint = "\nNote: Use a random selection of available functions for this problem.\n"
+            return prompt + constraint
+        elif self._policy_type == "retrieval":
+            # Add instruction for retrieval-based function selection
+            constraint = "\nNote: Use the most relevant functions based on the problem type.\n"
+            return prompt + constraint
+        
+        return prompt
     
     def _call_llm(self, prompt: str, question: str = "", context: str = "") -> str:
         """
