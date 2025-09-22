@@ -49,7 +49,8 @@ from .comat import CoMATPrompting
 from .pot import ProgramOfThoughtsPrompting
 from .zero_shot import ZeroShotPrompting
 from .pal import ProgramAidedLanguageModel
-from .testing import TestRunner, DatasetLoader, create_fpp_solver, create_cot_solver, create_pot_solver, create_zero_shot_solver, create_pal_solver, create_zero_cot_solver, create_auto_cot_solver, create_complex_cot_solver, create_comat_solver
+from .meta_prompting import MetaPrompting
+from .testing import TestRunner, DatasetLoader, create_fpp_solver, create_cot_solver, create_pot_solver, create_zero_shot_solver, create_pal_solver, create_zero_cot_solver, create_auto_cot_solver, create_complex_cot_solver, create_comat_solver, create_meta_prompting_solver
 from .evaluation import get_tolerance_function
 from .tracking import get_tracker
 
@@ -76,11 +77,12 @@ def interactive_mode(provider: str = None):
     print("7. PoT (Program-of-Thoughts) - Python code generation")
     print("8. Zero-Shot - Direct problem solving")
     print("9. PAL (Program-Aided Language Models) - Natural language + programming")
+    print("10. Meta Prompting - Intelligent method selection and optimization")
     print("Type 'exit' to quit, 'help' for help, 'switch' to change method\n")
     
     # Choose initial method
     while True:
-        method_choice = input("Select method (1-9): ").strip()
+        method_choice = input("Select method (1-10): ").strip()
         if method_choice == '1':
             method = 'fpp'
             solver = FunctionPrototypePrompting(provider=provider)
@@ -126,8 +128,13 @@ def interactive_mode(provider: str = None):
             solver = ProgramAidedLanguageModel(provider=provider)
             print("✅ PAL (Program-aided Language Models) selected!\n")
             break
+        elif method_choice == '10':
+            method = 'meta_prompting'
+            solver = MetaPrompting(provider=provider)
+            print("✅ Meta Prompting (Intelligent optimization) selected!\n")
+            break
         else:
-            print("Please enter a number 1-8")
+            print("Please enter a number 1-10")
     
     while True:
         try:
@@ -147,11 +154,13 @@ def interactive_mode(provider: str = None):
                 print("3. Zero-CoT (Zero-Shot Chain-of-Thought)")
                 print("4. Auto-CoT (Automatic Chain-of-Thought)")
                 print("5. Complex-CoT (Complex Chain-of-Thought)")
-                print("6. PoT (Program of Thoughts)")
-                print("7. Zero-Shot")
-                print("8. PAL (Program-aided Language Models)")
+                print("6. CoMAT (Chain of Mathematically Annotated Thought)")
+                print("7. PoT (Program of Thoughts)")
+                print("8. Zero-Shot")
+                print("9. PAL (Program-aided Language Models)")
+                print("10. Meta Prompting (Intelligent optimization)")
                 
-                switch_choice = input("Select new method (1-8): ").strip()
+                switch_choice = input("Select new method (1-10): ").strip()
                 if switch_choice == '1':
                     method = 'fpp'
                     solver = FunctionPrototypePrompting(provider=provider)
@@ -173,17 +182,25 @@ def interactive_mode(provider: str = None):
                     solver = ComplexCoTPrompting(provider=provider)
                     print("✅ Switched to Complex-CoT!\n")
                 elif switch_choice == '6':
+                    method = 'comat'
+                    solver = CoMATPrompting(provider=provider)
+                    print("✅ Switched to CoMAT!\n")
+                elif switch_choice == '7':
                     method = 'pot'
                     solver = ProgramOfThoughtsPrompting(provider=provider)
                     print("✅ Switched to PoT!\n")
-                elif switch_choice == '7':
+                elif switch_choice == '8':
                     method = 'zero_shot'
                     solver = ZeroShotPrompting(provider=provider)
                     print("✅ Switched to Zero-Shot!\n")
-                elif switch_choice == '8':
+                elif switch_choice == '9':
                     method = 'pal'
                     solver = ProgramAidedLanguageModel(provider=provider)
                     print("✅ Switched to PAL!\n")
+                elif switch_choice == '10':
+                    method = 'meta_prompting'
+                    solver = MetaPrompting(provider=provider)
+                    print("✅ Switched to Meta Prompting!\n")
                 else:
                     print("Invalid choice, staying with current method")
                 continue
@@ -230,6 +247,10 @@ def interactive_mode(provider: str = None):
                 result = solver.solve(question, context, show_reasoning=True)
                 print(f"✅ Final Answer: {result.get('answer', 'Unknown')}")
             
+            elif method == 'comat':
+                result = solver.solve(question, context, show_reasoning=True)
+                print(f"✅ Final Answer: {result.get('answer', 'Unknown')}")
+            
             elif method == 'pot':
                 result = solver.solve(question, context, show_reasoning=True)
                 print(f"✅ Final Answer: {result.get('result', result.get('answer', 'Unknown'))}")
@@ -237,6 +258,10 @@ def interactive_mode(provider: str = None):
             elif method == 'zero_shot':
                 result = solver.solve(question, context, show_reasoning=True)
                 print(f"✅ Final Answer: {result.get('result', result.get('answer', 'Unknown'))}")
+                
+            elif method == 'meta_prompting':
+                result = solver.solve(question, context, show_reasoning=True)
+                print(f"✅ Final Answer: {result.get('answer', 'Unknown')}")
             
             else:  # pal
                 result = solver.solve(question, context, show_reasoning=True)
@@ -382,8 +407,13 @@ def solve_single(method: str, question: str, context: str = "", show_code: bool 
             
             return result
         
+        elif method.lower() == 'meta_prompting':
+            meta = MetaPrompting(provider=provider)
+            result = meta.solve(question, context, show_reasoning=True)
+            return result
+        
         else:
-            raise ValueError(f"Unknown method: {method}. Use 'fpp', 'cot', 'zero_cot', 'auto_cot', 'complex_cot', 'comat', 'pot', 'zero_shot', or 'pal'")
+            raise ValueError(f"Unknown method: {method}. Use 'fpp', 'cot', 'zero_cot', 'auto_cot', 'complex_cot', 'comat', 'pot', 'zero_shot', 'pal', or 'meta_prompting'")
             
     except Exception as e:
         return {
@@ -436,8 +466,11 @@ def test_method(method: str, dataset: str, limit: Optional[int] = None,
     elif method.lower() == 'pal':
         solver = create_pal_solver(provider)
         runner = TestRunner('PAL', solver)
+    elif method.lower() == 'meta_prompting':
+        solver = create_meta_prompting_solver(provider)
+        runner = TestRunner('Meta Prompting', solver)
     else:
-        raise ValueError(f"Unknown method: {method}. Use 'fpp', 'cot', 'zero_cot', 'auto_cot', 'complex_cot', 'comat', 'pot', 'zero_shot', or 'pal'")
+        raise ValueError(f"Unknown method: {method}. Use 'fpp', 'cot', 'zero_cot', 'auto_cot', 'complex_cot', 'comat', 'pot', 'zero_shot', 'pal', or 'meta_prompting'")
     
     return runner.test_dataset(dataset, limit, verbose, output_dir)
 
@@ -896,7 +929,7 @@ def main():
     
     # Single problem solving
     solve_parser = subparsers.add_parser('solve', help='Solve a single problem')
-    solve_parser.add_argument('--method', '-m', choices=['fpp', 'cot', 'zero_cot', 'auto_cot', 'complex_cot', 'comat', 'pot', 'zero_shot', 'pal'], required=True,
+    solve_parser.add_argument('--method', '-m', choices=['fpp', 'cot', 'zero_cot', 'auto_cot', 'complex_cot', 'comat', 'pot', 'zero_shot', 'pal', 'meta_prompting'], required=True,
                              help='Prompting method to use')
     solve_parser.add_argument('--question', '-q', required=True,
                              help='Mathematical question to solve')
@@ -909,7 +942,7 @@ def main():
     
     # Dataset testing
     test_parser = subparsers.add_parser('test', help='Test method on dataset')
-    test_parser.add_argument('--method', '-m', choices=['fpp', 'cot', 'zero_cot', 'auto_cot', 'complex_cot', 'comat', 'pot', 'zero_shot', 'pal'], required=True,
+    test_parser.add_argument('--method', '-m', choices=['fpp', 'cot', 'zero_cot', 'auto_cot', 'complex_cot', 'comat', 'pot', 'zero_shot', 'pal', 'meta_prompting'], required=True,
                             help='Prompting method to use')
     test_parser.add_argument('--dataset', '-d', required=True,
                             help='Dataset to test on')

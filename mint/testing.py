@@ -396,3 +396,19 @@ def create_comat_solver(provider: str = None):
             'method': 'CoMAT'
         }
     return solve_comat 
+
+
+def create_meta_prompting_solver(provider: str = None):
+    """Create Meta Prompting solver function."""
+    def solve_meta_prompting(question: str, context: str = "") -> Dict[str, Any]:
+        from .meta_prompting import MetaPrompting
+        meta = MetaPrompting(provider=provider)
+        result = meta.solve(question, context, show_reasoning=False)
+        # Convert to standard format
+        return {
+            'result': result['answer'],
+            'success': result['success'],
+            'reasoning': result.get('reasoning', ''),
+            'method': 'Meta Prompting'
+        }
+    return solve_meta_prompting 
