@@ -3,7 +3,8 @@
 Unified CLI for MathCoRL - Mathematical Intelligence with Advanced Prompting Methods
 
 This CLI provides a comprehensive interface for mathematical problem solving using
-Function Prototype Prompting (FPP) and Chain-of-Thought (CoT) methods.
+Function Prototype Prompting (FPP), Chain-of-Thought (CoT), Zero-CoT, Auto-CoT, 
+Complex-CoT, and other advanced prompting methods.
 
 Usage Examples:
     # Interactive mode
@@ -12,10 +13,13 @@ Usage Examples:
     # Single problem solving
     python -m mint.cli solve --method fpp --question "What is 15 + 27?"
     python -m mint.cli solve --method cot --question "John has 20 apples..."
+    python -m mint.cli solve --method zero_cot --question "Solve 3x + 5 = 20"
+    python -m mint.cli solve --method auto_cot --question "Complex word problem..."
+    python -m mint.cli solve --method complex_cot --question "Advanced math problem..."
 
     # Dataset testing
     python -m mint.cli test --method fpp --dataset SVAMP --limit 50
-    python -m mint.cli test --method cot --dataset GSM8K --limit 100
+    python -m mint.cli test --method zero_cot --dataset GSM8K --limit 100
 
     # Method comparison
     python -m mint.cli compare --dataset SVAMP --limit 20
@@ -36,10 +40,13 @@ from typing import Optional, Dict, Any
 
 from .core import FunctionPrototypePrompting
 from .cot import ChainOfThoughtPrompting
+from .zero_cot import ZeroShotCoTPrompting
+from .auto_cot import AutoCoTPrompting
+from .complex_cot import ComplexCoTPrompting
 from .pot import ProgramOfThoughtsPrompting
 from .zero_shot import ZeroShotPrompting
 from .pal import ProgramAidedLanguageModel
-from .testing import TestRunner, DatasetLoader, create_fpp_solver, create_cot_solver, create_pot_solver, create_zero_shot_solver, create_pal_solver
+from .testing import TestRunner, DatasetLoader, create_fpp_solver, create_cot_solver, create_pot_solver, create_zero_shot_solver, create_pal_solver, create_zero_cot_solver, create_auto_cot_solver, create_complex_cot_solver
 from .evaluation import get_tolerance_function
 from .tracking import get_tracker
 
@@ -59,14 +66,17 @@ def interactive_mode(provider: str = None):
     print("Choose your method:")
     print("1. FPP (Function Prototype Prompting) - Code generation with function prototypes")
     print("2. CoT (Chain-of-Thought) - Step-by-step reasoning")
-    print("3. PoT (Program of Thoughts) - Generate Python code to solve problems")
-    print("4. Zero-Shot - Direct problem solving without examples")
-    print("5. PAL (Program-aided Language Models) - Reasoning + code generation")
+    print("3. Zero-CoT (Zero-Shot Chain-of-Thought) - Simple 'Let's think step by step'")
+    print("4. Auto-CoT (Automatic Chain-of-Thought) - Auto-generated diverse examples")
+    print("5. Complex-CoT (Complex Chain-of-Thought) - Advanced multi-stage reasoning")
+    print("6. PoT (Program-of-Thoughts) - Python code generation")
+    print("7. Zero-Shot - Direct problem solving")
+    print("8. PAL (Program-Aided Language Models) - Natural language + programming")
     print("Type 'exit' to quit, 'help' for help, 'switch' to change method\n")
     
     # Choose initial method
     while True:
-        method_choice = input("Select method (1 for FPP, 2 for CoT, 3 for PoT, 4 for Zero-Shot, 5 for PAL): ").strip()
+        method_choice = input("Select method (1-8): ").strip()
         if method_choice == '1':
             method = 'fpp'
             solver = FunctionPrototypePrompting(provider=provider)
@@ -78,22 +88,37 @@ def interactive_mode(provider: str = None):
             print("✅ CoT (Chain-of-Thought) selected!\n")
             break
         elif method_choice == '3':
+            method = 'zero_cot'
+            solver = ZeroShotCoTPrompting(provider=provider)
+            print("✅ Zero-CoT (Zero-Shot Chain-of-Thought) selected!\n")
+            break
+        elif method_choice == '4':
+            method = 'auto_cot'
+            solver = AutoCoTPrompting(provider=provider)
+            print("✅ Auto-CoT (Automatic Chain-of-Thought) selected!\n")
+            break
+        elif method_choice == '5':
+            method = 'complex_cot'
+            solver = ComplexCoTPrompting(provider=provider)
+            print("✅ Complex-CoT (Complex Chain-of-Thought) selected!\n")
+            break
+        elif method_choice == '6':
             method = 'pot'
             solver = ProgramOfThoughtsPrompting(provider=provider)
             print("✅ PoT (Program of Thoughts) selected!\n")
             break
-        elif method_choice == '4':
+        elif method_choice == '7':
             method = 'zero_shot'
             solver = ZeroShotPrompting(provider=provider)
             print("✅ Zero-Shot selected!\n")
             break
-        elif method_choice == '5':
+        elif method_choice == '8':
             method = 'pal'
             solver = ProgramAidedLanguageModel(provider=provider)
             print("✅ PAL (Program-aided Language Models) selected!\n")
             break
         else:
-            print("Please enter 1, 2, 3, 4, or 5")
+            print("Please enter a number 1-8")
     
     while True:
         try:
@@ -110,33 +135,48 @@ def interactive_mode(provider: str = None):
                 print("Switch to:")
                 print("1. FPP (Function Prototype Prompting)")
                 print("2. CoT (Chain-of-Thought)")
-                print("3. PoT (Program of Thoughts)")
-                print("4. Zero-Shot")
-                print("5. PAL (Program-aided Language Models)")
+                print("3. Zero-CoT (Zero-Shot Chain-of-Thought)")
+                print("4. Auto-CoT (Automatic Chain-of-Thought)")
+                print("5. Complex-CoT (Complex Chain-of-Thought)")
+                print("6. PoT (Program of Thoughts)")
+                print("7. Zero-Shot")
+                print("8. PAL (Program-aided Language Models)")
                 
-                choice = input("Select method (1, 2, 3, 4, or 5): ").strip()
-                if choice == '1':
+                switch_choice = input("Select new method (1-8): ").strip()
+                if switch_choice == '1':
                     method = 'fpp'
                     solver = FunctionPrototypePrompting(provider=provider)
-                    print("🔄 Switched to FPP (Function Prototype Prompting)")
-                elif choice == '2':
+                    print("✅ Switched to FPP!\n")
+                elif switch_choice == '2':
                     method = 'cot'
                     solver = ChainOfThoughtPrompting(provider=provider)
-                    print("🔄 Switched to CoT (Chain-of-Thought)")
-                elif choice == '3':
+                    print("✅ Switched to CoT!\n")
+                elif switch_choice == '3':
+                    method = 'zero_cot'
+                    solver = ZeroShotCoTPrompting(provider=provider)
+                    print("✅ Switched to Zero-CoT!\n")
+                elif switch_choice == '4':
+                    method = 'auto_cot'
+                    solver = AutoCoTPrompting(provider=provider)
+                    print("✅ Switched to Auto-CoT!\n")
+                elif switch_choice == '5':
+                    method = 'complex_cot'
+                    solver = ComplexCoTPrompting(provider=provider)
+                    print("✅ Switched to Complex-CoT!\n")
+                elif switch_choice == '6':
                     method = 'pot'
                     solver = ProgramOfThoughtsPrompting(provider=provider)
-                    print("🔄 Switched to PoT (Program of Thoughts)")
-                elif choice == '4':
+                    print("✅ Switched to PoT!\n")
+                elif switch_choice == '7':
                     method = 'zero_shot'
                     solver = ZeroShotPrompting(provider=provider)
-                    print("🔄 Switched to Zero-Shot")
-                elif choice == '5':
+                    print("✅ Switched to Zero-Shot!\n")
+                elif switch_choice == '8':
                     method = 'pal'
                     solver = ProgramAidedLanguageModel(provider=provider)
-                    print("🔄 Switched to PAL (Program-aided Language Models)")
+                    print("✅ Switched to PAL!\n")
                 else:
-                    print("❌ Invalid choice. Staying with current method.")
+                    print("Invalid choice, staying with current method")
                 continue
             elif not question:
                 continue
@@ -167,19 +207,31 @@ def interactive_mode(provider: str = None):
             
             elif method == 'cot':
                 result = solver.solve(question, context, show_reasoning=True)
-                print(f"✅ Final Answer: {result['result']}")
+                print(f"✅ Final Answer: {result.get('result', result.get('answer', 'Unknown'))}")
+            
+            elif method == 'zero_cot':
+                result = solver.solve(question, context, show_reasoning=True)
+                print(f"✅ Final Answer: {result.get('answer', 'Unknown')}")
+            
+            elif method == 'auto_cot':
+                result = solver.solve(question, context, show_reasoning=True)
+                print(f"✅ Final Answer: {result.get('answer', 'Unknown')}")
+            
+            elif method == 'complex_cot':
+                result = solver.solve(question, context, show_reasoning=True)
+                print(f"✅ Final Answer: {result.get('answer', 'Unknown')}")
             
             elif method == 'pot':
                 result = solver.solve(question, context, show_reasoning=True)
-                print(f"✅ Final Answer: {result['result']}")
+                print(f"✅ Final Answer: {result.get('result', result.get('answer', 'Unknown'))}")
             
             elif method == 'zero_shot':
                 result = solver.solve(question, context, show_reasoning=True)
-                print(f"✅ Final Answer: {result['result']}")
+                print(f"✅ Final Answer: {result.get('result', result.get('answer', 'Unknown'))}")
             
             else:  # pal
                 result = solver.solve(question, context, show_reasoning=True)
-                print(f"✅ Final Answer: {result['result']}")
+                print(f"✅ Final Answer: {result.get('result', result.get('answer', 'Unknown'))}")
             
             print("-" * 50)
             
@@ -204,6 +256,21 @@ def print_interactive_help():
 • Solves problems with step-by-step reasoning
 • Shows detailed reasoning process
 • Good for understanding problem-solving logic
+
+🔍 Zero-CoT (Zero-Shot Chain-of-Thought):
+• Uses "Let's think step by step" without examples
+• Simple and efficient reasoning approach
+• Good balance between accuracy and speed
+
+🤖 Auto-CoT (Automatic Chain-of-Thought):
+• Automatically generates diverse examples for few-shot learning
+• Uses clustering to select representative demonstrations
+• Adapts to problem type automatically
+
+🔬 Complex-CoT (Complex Chain-of-Thought):
+• Advanced multi-stage reasoning for complex problems
+• Includes analysis, decomposition, solving, and verification
+• Best for challenging mathematical problems
 
 💻 PoT (Program of Thoughts):
 • Generates Python code to solve numerical problems
@@ -264,6 +331,21 @@ def solve_single(method: str, question: str, context: str = "", show_code: bool 
             result = cot.solve(question, context, show_reasoning=True)
             return result
         
+        elif method.lower() == 'zero_cot':
+            zero_cot = ZeroShotCoTPrompting(provider=provider)
+            result = zero_cot.solve(question, context, show_reasoning=True)
+            return result
+        
+        elif method.lower() == 'auto_cot':
+            auto_cot = AutoCoTPrompting(provider=provider)
+            result = auto_cot.solve(question, context, show_reasoning=True)
+            return result
+        
+        elif method.lower() == 'complex_cot':
+            complex_cot = ComplexCoTPrompting(provider=provider)
+            result = complex_cot.solve(question, context, show_reasoning=True)
+            return result
+        
         elif method.lower() == 'pot':
             pot = ProgramOfThoughtsPrompting(provider=provider)
             result = pot.solve(question, context, show_reasoning=True)
@@ -319,6 +401,15 @@ def test_method(method: str, dataset: str, limit: Optional[int] = None,
     elif method.lower() == 'cot':
         solver = create_cot_solver(provider)
         runner = TestRunner('CoT', solver)
+    elif method.lower() == 'zero_cot':
+        solver = create_zero_cot_solver(provider)
+        runner = TestRunner('Zero-CoT', solver)
+    elif method.lower() == 'auto_cot':
+        solver = create_auto_cot_solver(provider)
+        runner = TestRunner('Auto-CoT', solver)
+    elif method.lower() == 'complex_cot':
+        solver = create_complex_cot_solver(provider)
+        runner = TestRunner('Complex-CoT', solver)
     elif method.lower() == 'pot':
         solver = create_pot_solver(provider)
         runner = TestRunner('PoT', solver)
@@ -788,7 +879,7 @@ def main():
     
     # Single problem solving
     solve_parser = subparsers.add_parser('solve', help='Solve a single problem')
-    solve_parser.add_argument('--method', '-m', choices=['fpp', 'cot', 'pot', 'zero_shot', 'pal'], required=True,
+    solve_parser.add_argument('--method', '-m', choices=['fpp', 'cot', 'zero_cot', 'auto_cot', 'complex_cot', 'pot', 'zero_shot', 'pal'], required=True,
                              help='Prompting method to use')
     solve_parser.add_argument('--question', '-q', required=True,
                              help='Mathematical question to solve')
@@ -801,7 +892,7 @@ def main():
     
     # Dataset testing
     test_parser = subparsers.add_parser('test', help='Test method on dataset')
-    test_parser.add_argument('--method', '-m', choices=['fpp', 'cot', 'pot', 'zero_shot', 'pal'], required=True,
+    test_parser.add_argument('--method', '-m', choices=['fpp', 'cot', 'zero_cot', 'auto_cot', 'complex_cot', 'pot', 'zero_shot', 'pal'], required=True,
                             help='Prompting method to use')
     test_parser.add_argument('--dataset', '-d', required=True,
                             help='Dataset to test on')

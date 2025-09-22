@@ -331,4 +331,52 @@ def create_pal_solver(provider: str = None):
         from .pal import ProgramAidedLanguageModel
         pal = ProgramAidedLanguageModel(provider=provider)
         return pal.solve_silent(question, context)
-    return solve_pal 
+    return solve_pal
+
+
+def create_zero_cot_solver(provider: str = None):
+    """Create Zero-CoT solver function."""
+    def solve_zero_cot(question: str, context: str = "") -> Dict[str, Any]:
+        from .zero_cot import ZeroShotCoTPrompting
+        zero_cot = ZeroShotCoTPrompting(provider=provider)
+        result = zero_cot.solve(question, context, show_reasoning=False)
+        # Convert to standard format
+        return {
+            'result': result['answer'],
+            'success': result['success'],
+            'reasoning': result.get('reasoning', ''),
+            'method': 'Zero-CoT'
+        }
+    return solve_zero_cot
+
+
+def create_auto_cot_solver(provider: str = None):
+    """Create Auto-CoT solver function."""
+    def solve_auto_cot(question: str, context: str = "") -> Dict[str, Any]:
+        from .auto_cot import AutoCoTPrompting
+        auto_cot = AutoCoTPrompting(provider=provider)
+        result = auto_cot.solve(question, context, show_reasoning=False, generate_new_examples=False)
+        # Convert to standard format
+        return {
+            'result': result['answer'],
+            'success': result['success'],
+            'reasoning': result.get('reasoning', ''),
+            'method': 'Auto-CoT'
+        }
+    return solve_auto_cot
+
+
+def create_complex_cot_solver(provider: str = None):
+    """Create Complex-CoT solver function."""
+    def solve_complex_cot(question: str, context: str = "") -> Dict[str, Any]:
+        from .complex_cot import ComplexCoTPrompting
+        complex_cot = ComplexCoTPrompting(provider=provider)
+        result = complex_cot.solve(question, context, show_reasoning=False, verify_answer=False)
+        # Convert to standard format
+        return {
+            'result': result['answer'],
+            'success': result['success'],
+            'reasoning': result.get('reasoning', ''),
+            'method': 'Complex-CoT'
+        }
+    return solve_complex_cot 
