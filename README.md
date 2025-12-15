@@ -1,6 +1,10 @@
 # MathCoRL - Mathematical Intelligence with Reinforcement Learning
 
-🚀 **Comprehensive framework for mathematical reasoning research with dual LLM providers, reinforcement learning, and advanced API tracking**
+[![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![arXiv](https://img.shields.io/badge/arXiv-2501.xxxxx-b31b1b.svg)](https://arxiv.org/)
+
+Research framework for mathematical reasoning with dual LLM providers (OpenAI, Claude) and reinforcement learning-based example selection.
 
 ## 🎯 **Dual Research Framework**
 
@@ -65,6 +69,12 @@ Each dataset includes:
 - **API cost tracking**: Monitor usage across providers
 
 ## 🚀 **Quick Start**
+
+### **Requirements**
+- **Python**: 3.8+ (tested on 3.10, 3.11, 3.13)
+- **Memory**: 4GB minimum, 8GB recommended for Policy Network training
+- **Storage**: 2GB for datasets and embeddings
+- **API Keys**: OpenAI or Anthropic account with API access
 
 ### **Installation**
 ```bash
@@ -307,6 +317,50 @@ print(f"Current model: {config.get_current_model_name()}")
 
 ## 🤝 **Contributing**
 
+See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines on:
+- Code style and testing requirements
+- Pull request process
+- Research contribution areas
+
+## 🐛 **Troubleshooting**
+
+### Common Issues
+
+**Import Error**: `ModuleNotFoundError: No module named 'mint'`
+```bash
+pip install -e .  # Install package in development mode
+```
+
+**API Key Error**: `openai.error.AuthenticationError`
+```bash
+# Verify .env file exists and contains valid keys
+cat .env | grep API_KEY
+export OPENAI_API_KEY=your_key_here  # Set directly if needed
+```
+
+**CUDA/MPS Device Error**: `RuntimeError: MPS backend out of memory`
+```bash
+# Use CPU instead of GPU
+export PYTORCH_ENABLE_MPS_FALLBACK=1
+# Or reduce batch size in configs/hyperparameters.yaml
+```
+
+**Embedding Generation Slow**: Taking too long on large datasets
+```bash
+# Use smaller candidate pools
+python generate_candidates.py --n-candidates 50  # Default is 100
+```
+
+**Policy Network Training Unstable**: Loss not decreasing
+```bash
+# Adjust learning rate and epochs in configs/hyperparameters.yaml
+# Try: lr: 0.0001 (lower) or epochs: 5 (more training)
+```
+
+For additional support, see [documentation](docs/) or open an issue on GitHub.
+
+## 🤝 **Contributing**
+
 MathCoRL welcomes contributions in:
 - **New Prompting Methods**: Additional structured reasoning approaches
 - **LLM Provider Integration**: Support for new language models
@@ -318,9 +372,3 @@ MathCoRL welcomes contributions in:
 ## 📜 **License**
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
----
-
-🚀 **Advanced Mathematical Reasoning Research Made Easy!** 
-
-Whether you're studying prompting techniques, in-context learning strategies, comparing LLM providers, or optimizing research costs, MathCoRL provides comprehensive tools for cutting-edge mathematical intelligence research with full dual-provider support and advanced tracking capabilities.

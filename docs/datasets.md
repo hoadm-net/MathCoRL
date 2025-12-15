@@ -376,6 +376,3 @@ def process_dataset_efficiently(dataset_path):
         yield result
 ```
 
----
-
-**📚 Dataset Diversity**: MathCoRL's dataset collection spans from elementary arithmetic to complex financial analysis, providing comprehensive coverage for mathematical reasoning research across different domains and complexity levels. 

@@ -443,6 +443,3 @@ print(f"Method X achieves Y% accuracy at $Z per sample")
 print(f"Cost difference: +W% for -V% accuracy vs. baseline")
 ```
 
----
-
-**💰 Smart Cost Management**: Tracking helps researchers optimize budget, compare method efficiency, and make informed decisions about API usage in mathematical reasoning research! 

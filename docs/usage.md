@@ -434,7 +434,3 @@ python mathcorl.py stats --hours 1
 # Use smaller sample sizes for testing
 python run_comparison.py --dataset TAT-QA --samples 10
 ```
-
----
-
-**Happy Research!** 🚀 Whether you're comparing prompting methods, training neural policies, or optimizing API costs, MathCoRL provides comprehensive tools for mathematical reasoning research. 

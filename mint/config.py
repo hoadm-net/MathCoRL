@@ -37,14 +37,23 @@ _hyperparameters_cache: Optional[Dict[str, Any]] = None
 
 
 def load_hyperparameters(reload: bool = False) -> Dict[str, Any]:
-    """
-    Load hyperparameters from YAML file with caching.
+    """Load hyperparameters from YAML configuration with caching.
+    
+    Reads configs/hyperparameters.yaml and caches result for efficiency.
+    Contains settings for LLM models, policy network architecture, training,
+    reward weights, and dataset-specific parameters.
     
     Args:
-        reload: Force reload from file (ignore cache)
+        reload: Force reload from disk, ignoring cache. Default: False.
         
     Returns:
-        Dictionary of hyperparameters
+        Dictionary with hyperparameter sections: llm, policy_network, training,
+        reward, datasets, reproducibility, evaluation, ablation.
+        
+    Example:
+        >>> config = load_hyperparameters()
+        >>> print(config['llm']['openai']['model'])  # 'gpt-4o-mini'
+        >>> print(config['policy_network']['hidden_dim'])  # 768
     """
     global _hyperparameters_cache
     

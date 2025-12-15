@@ -282,16 +282,5 @@ This approach builds upon recent advances in:
 3. **End-to-End Pipeline**: Complete system from candidate generation to evaluation
 4. **Domain Adaptability**: Configurable for different mathematical reasoning domains
 
-## 🤝 Contributing
-
-Contributions are welcome! Key areas for improvement:
-- Novel policy architectures for mathematical reasoning
-- Better training objectives and reward functions
-- Evaluation on additional mathematical domains
-- Transfer learning between datasets
-
-See the main README for development setup and contribution guidelines.
-
----
 
 **🎯 Policy Network Vision**: This approach demonstrates how reinforcement learning can be applied to optimize in-context learning for mathematical reasoning, providing an adaptive alternative to traditional heuristic-based example selection methods. 

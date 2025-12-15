@@ -298,8 +298,3 @@ print(result)
 3. **Monitor Usage**: Track API costs and optimize your usage patterns
 4. **Contribute**: Help improve Claude integration by reporting issues or submitting PRs
 
----
-
-🚀 **Happy Mathematical Reasoning with Claude!** 
-
-For questions or issues, please check the main project documentation or create an issue on GitHub. 

@@ -564,7 +564,3 @@ Same seed → Identical results (assuming same hardware/versions).
 - **Function Prototype Prompting**: [Code as Policies: Language Model Programs for Embodied Control](https://arxiv.org/abs/2209.07753) (Liang et al., 2022)
 
 ---
-
-**Last Updated**: December 15, 2025  
-**MathCoRL Version**: 1.0  
-**Maintained by**: MathCoRL Research Team

@@ -156,7 +156,3 @@ python mathcorl.py chart --type all
 # Clear old data
 python mathcorl.py clear-logs
 ```
-
----
-
-**Happy Analyzing!** 📊✨ 

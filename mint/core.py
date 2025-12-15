@@ -43,15 +43,22 @@ class FunctionPrototypePrompting:
                  temperature: float = 0.0,
                  max_tokens: int = 1000,
                  provider: Optional[str] = None):
-        """
-        Initialize FPP with LangChain LLM (supports OpenAI and Claude).
+        """Initialize Function Prototype Prompting solver.
+        
+        Supports dual LLM providers (OpenAI, Claude) with automatic configuration
+        from environment variables or YAML config.
         
         Args:
-            api_key: API key (optional, will use environment variable)
-            model: Model name (optional, will use config default)
-            temperature: Sampling temperature (default: 0.0)
-            max_tokens: Maximum tokens in response (default: 1000)
-            provider: LLM provider ('openai', 'claude', optional - will use config default)
+            api_key: API key override. Defaults to OPENAI_API_KEY or ANTHROPIC_API_KEY env var.
+            model: Model name override. Defaults to config value based on provider.
+            temperature: Sampling temperature for response generation. Default: 0.0 (deterministic).
+            max_tokens: Maximum tokens in LLM response. Default: 1000.
+            provider: LLM provider selection ('openai' or 'claude'). Defaults to LLM_PROVIDER env var or 'openai'.
+            
+        Example:
+            >>> fpp = FunctionPrototypePrompting(provider="claude")
+            >>> result = fpp.solve("What is 15 + 27?")
+            >>> print(result)  # 42
         """
         from .config import load_config, create_llm_client, get_current_model_name
         
@@ -100,15 +107,22 @@ class FunctionPrototypePrompting:
             logger.info("LangSmith tracing disabled")
     
     def solve(self, question: str, context: str = "") -> Union[float, int, None]:
-        """
-        Solve a mathematical question using Function Prototype Prompting.
+        """Solve mathematical question using structured code generation.
+        
+        Generates Python code with predefined function prototypes, executes it,
+        and returns the numerical answer.
         
         Args:
-            question: Mathematical question to solve
-            context: Optional context information
+            question: Natural language math question.
+            context: Additional context (tables, financial data, etc.). Optional.
             
         Returns:
-            Numerical result or None if solving failed
+            Numerical answer (int/float) or None if execution failed.
+            
+        Example:
+            >>> fpp = FunctionPrototypePrompting()
+            >>> result = fpp.solve("John has 20 apples. He gives 8 away. How many left?")
+            >>> print(result)  # 12
         """
         try:
             # Create prompt based on variant type

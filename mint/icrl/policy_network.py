@@ -8,20 +8,30 @@ logger = logging.getLogger(__name__)
 
 
 class PolicyNetwork(nn.Module):
-    """
-    Enhanced Policy Network for In-Context Example Selection
+    """Neural network for learned in-context example selection.
     
-    Based on recent advances in RL for few-shot learning (2024-2025):
-    - Multi-head attention for better representation learning
-    - Contrastive learning components
-    - Adaptive gating mechanisms
+    Trained with PPO to select k-examples that maximize problem-solving accuracy.
+    Uses multi-head attention to learn relationships between problems and candidates.
     
-    Input:
-    - problem_emb: embedding vector from OpenAI text-embedding-3-small (1536-D)
-    - candidate_embs: tensor containing embeddings of candidate examples (N x 1536)
+    Architecture:
+        Input (1536-D) → Linear (768-D) → Multi-head Attention (8 heads) → 
+        Feed-forward → Scoring → Adaptive Temperature → Softmax → Probabilities
     
-    Output:
-    - probs: probability distribution over candidates for selection
+    Training:
+        - Algorithm: Proximal Policy Optimization (PPO)
+        - Reward: 0.6 * accuracy + 0.3 * similarity + 0.1 * diversity
+        - Selection: Stochastic sampling during training, greedy top-k at inference
+    
+    Args:
+        emb_dim: Embedding dimension from text-embedding-3-small. Default: 1536.
+        hidden_dim: Internal representation dimension. Default: 768.
+        num_heads: Number of attention heads. Default: 8.
+        dropout: Dropout probability for regularization. Default: 0.1.
+        
+    Example:
+        >>> policy = PolicyNetwork()
+        >>> probs = policy(problem_emb, candidate_embs)
+        >>> selected_idx = torch.multinomial(probs, num_samples=2)  # sample 2 examples
     """
 
     def __init__(self, emb_dim: Optional[int] = None, hidden_dim: Optional[int] = None, 
