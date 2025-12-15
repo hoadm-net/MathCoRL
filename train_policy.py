@@ -25,6 +25,7 @@ load_dotenv()
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from mint.icrl.trainer import PolicyNetworkTrainer
+from mint.icrl.config import RewardConfig
 from mint.config import load_config, get_dataset_config, get_training_config
 from mint.reproducibility import set_seed, add_seed_argument
 
@@ -144,6 +145,22 @@ Dataset Configurations:
         help='Overwrite existing model files'
     )
     
+    # Reward configuration
+    parser.add_argument(
+        '--reward-weights',
+        type=str,
+        default=None,
+        help='Reward weights as "accuracy,similarity,diversity" (default: 0.6,0.3,0.1)'
+    )
+    
+    parser.add_argument(
+        '--reward-preset',
+        type=str,
+        choices=['accuracy_focused', 'diversity_focused', 'balanced'],
+        default=None,
+        help='Use preset reward configuration'
+    )
+    
     # Reproducibility
     add_seed_argument(parser)
     
@@ -173,6 +190,20 @@ Dataset Configurations:
     k = args.k or dataset_config['k']
     lr = args.lr or dataset_config['lr']
     
+    # Configure reward weights
+    reward_config = None
+    if args.reward_preset:
+        if args.reward_preset == 'accuracy_focused':
+            reward_config = RewardConfig.accuracy_focused()
+        elif args.reward_preset == 'diversity_focused':
+            reward_config = RewardConfig.diversity_focused()
+        elif args.reward_preset == 'balanced':
+            reward_config = RewardConfig.balanced()
+        logger.info(f"Using reward preset: {args.reward_preset}")
+    elif args.reward_weights:
+        reward_config = RewardConfig.from_string(args.reward_weights)
+        logger.info(f"Using custom reward weights: {args.reward_weights}")
+    
     # Display configuration
     logger.info("🎓 MathCoRL - Policy Network Training")
     logger.info("=" * 50)
@@ -185,6 +216,8 @@ Dataset Configurations:
     logger.info(f"Candidates dir: {args.candidates_dir}")
     logger.info(f"Models dir: {args.models_dir}")
     logger.info(f"Save best: {save_best}")
+    if reward_config:
+        logger.info(f"Reward config: {reward_config}")
     
     # Check if candidates file exists
     candidates_file = os.path.join(args.candidates_dir, f"{args.dataset}.json")
@@ -234,7 +267,8 @@ Dataset Configurations:
         trainer = PolicyNetworkTrainer(
             dataset_name=args.dataset,
             candidates_dir=args.candidates_dir,
-            models_dir=args.models_dir
+            models_dir=args.models_dir,
+            reward_config=reward_config
         )
         
         # Override trainer config with command line arguments

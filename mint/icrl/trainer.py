@@ -13,6 +13,7 @@ from openai import OpenAI
 
 from .policy_network import PolicyNetwork, ppo_loss, contrastive_loss
 from .evaluator import PolicyNetworkEvaluator
+from .config import RewardConfig
 from ..config import load_config
 from ..utils import execute_code, evaluate_result
 
@@ -32,7 +33,8 @@ class PolicyNetworkTrainer:
     """
     
     def __init__(self, dataset_name: str, candidates_dir: str = "candidates", 
-                 models_dir: str = "models", openai_client: OpenAI = None):
+                 models_dir: str = "models", openai_client: OpenAI = None,
+                 reward_config: RewardConfig = None):
         """
         Initialize trainer for specific dataset
         
@@ -41,6 +43,7 @@ class PolicyNetworkTrainer:
             candidates_dir: Directory containing candidate files
             models_dir: Directory to save trained models
             openai_client: OpenAI client for GPT calls
+            reward_config: Reward weight configuration (default: balanced 0.6/0.3/0.1)
         """
         self.dataset_name = dataset_name
         self.candidates_dir = candidates_dir
@@ -49,6 +52,7 @@ class PolicyNetworkTrainer:
         # Configuration
         self.config = load_config()
         self.openai_client = openai_client or OpenAI(api_key=self.config.get('api_key'))
+        self.reward_config = reward_config or RewardConfig()
         
         # Dataset-specific configurations
         self.dataset_configs = {
@@ -86,6 +90,7 @@ class PolicyNetworkTrainer:
         logger.info(f"PolicyNetworkTrainer initialized for {dataset_name}")
         logger.info(f"Loaded {len(self.candidates)} candidates")
         logger.info(f"Config: {self.config_params}")
+        logger.info(f"Reward: {self.reward_config}")
 
     def load_candidates(self) -> List[Dict[str, Any]]:
         """Load candidates from ICRL Step 1"""
@@ -155,10 +160,10 @@ class PolicyNetworkTrainer:
         else:
             diversity_reward = 0.0
         
-        # Weighted combination (configurable via YAML)
-        total_reward = (0.6 * accuracy_reward + 
-                       0.3 * similarity_reward + 
-                       0.1 * diversity_reward)
+        # Weighted combination (configurable via RewardConfig)
+        total_reward = (self.reward_config.accuracy_weight * accuracy_reward + 
+                       self.reward_config.similarity_weight * similarity_reward + 
+                       self.reward_config.diversity_weight * diversity_reward)
         
         return total_reward
 

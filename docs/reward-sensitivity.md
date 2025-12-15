@@ -9,6 +9,42 @@ Evaluate impact of different reward weight combinations (λ_accuracy, λ_similar
 - Final accuracy on mathematical reasoning tasks
 - Example selection behavior
 
+## Reward Configuration
+
+The reward function is now **fully configurable** via `RewardConfig` dataclass in [mint/icrl/config.py](../mint/icrl/config.py):
+
+```python
+from mint.icrl.config import RewardConfig
+
+# Default configuration
+config = RewardConfig(
+    accuracy_weight=0.6,    # λ_acc
+    similarity_weight=0.3,  # λ_sim
+    diversity_weight=0.1    # λ_div
+)
+
+# Preset configurations
+accuracy_focused = RewardConfig.accuracy_focused()  # 0.9, 0.05, 0.05
+diversity_focused = RewardConfig.diversity_focused()  # 0.4, 0.5, 0.1
+balanced = RewardConfig.balanced()  # 0.5, 0.25, 0.25
+
+# String parsing for CLI
+config = RewardConfig.from_string("0.9,0.05,0.05")
+```
+
+The configuration automatically validates:
+- All weights are non-negative
+- Weights sum to 1.0 (normalized probability distribution)
+
+**CLI Usage:**
+```bash
+# Custom weights
+python train_policy.py --dataset GSM8K --reward-weights "0.9,0.05,0.05"
+
+# Preset configuration
+python train_policy.py --dataset GSM8K --reward-preset accuracy_focused
+```
+
 ## Methodology
 
 ### Configurations Tested
