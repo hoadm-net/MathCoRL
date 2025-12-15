@@ -10,8 +10,8 @@ import json
 import logging
 from typing import Dict, Any, List, Optional, Tuple
 from langchain_openai import ChatOpenAI
-from langchain.prompts import PromptTemplate
-from langchain.schema import HumanMessage
+from langchain_core.prompts import PromptTemplate
+from langchain_core.messages import HumanMessage
 
 logger = logging.getLogger(__name__)
 

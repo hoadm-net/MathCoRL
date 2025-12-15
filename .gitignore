@@ -26,3 +26,5 @@ charts/*
 # Experiment data exports
 *_experiment_data.json
 tracking_export_*.jsonvenv/
+
+plans.txt

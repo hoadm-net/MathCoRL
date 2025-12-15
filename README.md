@@ -234,19 +234,16 @@ CLI Interface → Provider Selection → Method Execution → Universal Tracking
 
 ## 📚 **Documentation**
 
-### **Core Documentation**
-- **[README_USAGE.md](README_USAGE.md)**: Complete usage guide for both research tasks
-- **[README_CLAUDE.md](README_CLAUDE.md)**: Claude integration setup and usage
-- **[README_TRACKING.md](README_TRACKING.md)**: API usage tracking and cost monitoring
-- **[README_POLICY_NETWORK.md](README_POLICY_NETWORK.md)**: Policy network architecture and training
+Comprehensive guides available in [docs/](docs/) directory:
 
-### **Dataset & Evaluation**
-- **[README_DATASETS.md](README_DATASETS.md)**: Dataset descriptions and preprocessing
-- **[README_CHARTS.md](README_CHARTS.md)**: Visualization and analysis tools
-- **[USAGE_WITH_TRACKING.md](USAGE_WITH_TRACKING.md)**: Practical examples with tracking
-
-### **Advanced Topics**
-- **[REFACTORING_SUMMARY.md](REFACTORING_SUMMARY.md)**: Technical implementation details
+- **[Usage Guide](docs/usage.md)**: Complete usage guide for both research tasks
+- **[API Tracking](docs/tracking.md)**: API usage tracking and cost monitoring
+- **[Tracking Examples](docs/tracking-examples.md)**: Practical examples with tracking
+- **[Claude Integration](docs/claude.md)**: Claude setup and configuration
+- **[Datasets](docs/datasets.md)**: Dataset descriptions and preprocessing
+- **[Policy Network](docs/policy-network.md)**: Neural network architecture and training
+- **[Charts & Visualization](docs/charts.md)**: Analysis and visualization tools
+- **[Technical Notes](docs/refactoring.md)**: Implementation details and refactoring history
 
 ## 🎓 **Research Applications**
 

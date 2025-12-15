@@ -7,7 +7,7 @@ This module handles loading and formatting prompts and function prototypes.
 import os
 from pathlib import Path
 from typing import Dict, Optional, List
-from langchain.prompts import PromptTemplate
+from langchain_core.prompts import PromptTemplate
 
 
 def get_templates_dir() -> str:

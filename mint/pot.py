@@ -14,8 +14,8 @@ import logging
 import traceback
 from typing import Dict, Any, Optional, Union
 from langchain_openai import ChatOpenAI
-from langchain.prompts import PromptTemplate
-from langchain.schema import HumanMessage
+from langchain_core.prompts import PromptTemplate
+from langchain_core.messages import HumanMessage
 
 from .utils import execute_code
 

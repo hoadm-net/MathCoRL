@@ -10,7 +10,7 @@ import re
 import logging
 from typing import Dict, Any, Optional, Union
 from langchain_openai import ChatOpenAI
-from langchain.schema import HumanMessage
+from langchain_core.messages import HumanMessage
 from .utils import execute_code
 
 # Set up logging

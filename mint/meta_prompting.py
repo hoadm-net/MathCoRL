@@ -29,7 +29,7 @@ try:
     from langchain_core.messages import HumanMessage
 except ImportError:
     try:
-        from langchain.schema import HumanMessage
+        from langchain_core.messages import HumanMessage
     except ImportError:
         # Fallback for testing without langchain
         class HumanMessage:
