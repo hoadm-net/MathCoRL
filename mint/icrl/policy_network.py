@@ -78,56 +78,73 @@ class PolicyNetwork(nn.Module):
 
     def forward(self, problem_emb, candidate_embs):
         """
-        Forward pass with multi-head attention and adaptive scoring
+        Forward pass: Score each candidate's relevance to the problem
+        
+        Selection Process (see docs/policy-selection-rules.md for details):
+        1. Normalize embeddings to unit sphere
+        2. Project to hidden dimension (1536-D → 768-D)
+        3. Multi-head attention to capture problem-candidate relationships
+        4. Score each candidate via:
+           - Interaction score: dot product with problem representation
+           - Projection score: learned non-linear scoring function
+        5. Apply adaptive temperature and softmax to get probability distribution
         
         Args:
-            problem_emb: shape [1, 1536] - problem embedding
-            candidate_embs: shape [N, 1536] - candidate embeddings
+            problem_emb: shape [1, 1536] - target problem embedding
+            candidate_embs: shape [N, 1536] - pool of N candidate example embeddings
             
         Returns:
             probs: shape [N] - probability distribution over candidates
+                   - Training: sample from this distribution (stochastic)
+                   - Inference: take top-k (greedy)
         """
         batch_size = candidate_embs.size(0)
         
-        # Normalize embeddings
+        # Step 1: Normalize embeddings to unit sphere
+        # Rationale: Makes cosine similarity equivalent to dot product
         problem_emb = F.normalize(problem_emb, p=2, dim=-1)
         candidate_embs = F.normalize(candidate_embs, p=2, dim=-1)
         
-        # Project to hidden dimension
-        problem_h = self.input_projection(problem_emb)  # [1, hidden_dim]
-        candidate_h = self.input_projection(candidate_embs)  # [N, hidden_dim]
+        # Step 2: Project to hidden dimension for efficient computation
+        problem_h = self.input_projection(problem_emb)  # [1, 768]
+        candidate_h = self.input_projection(candidate_embs)  # [N, 768]
         
-        # Combine for attention (problem as query, candidates as key/value)
-        combined = torch.cat([problem_h, candidate_h], dim=0)  # [N+1, hidden_dim]
+        # Step 3: Combine for self-attention
+        # Attention learns: which candidates are relevant? which pairs work well together?
+        combined = torch.cat([problem_h, candidate_h], dim=0)  # [N+1, 768]
         
-        # Multi-head attention
+        # Multi-head attention: 8 heads, each can focus on different aspects
+        # (e.g., mathematical concepts, difficulty, solution structure)
         attn_out, attn_weights = self.attention(
             query=combined,
             key=combined, 
             value=combined
         )
         
-        # Residual connection and layer norm
+        # Residual connection + layer norm (standard Transformer technique)
         combined = self.layer_norm1(combined + attn_out)
         
-        # Feed-forward network
+        # Feed-forward network for non-linear transformation
         ffn_out = self.ffn(combined)
         combined = self.layer_norm2(combined + ffn_out)
         
-        # Extract candidate representations (skip problem at index 0)
-        candidate_repr = combined[1:]  # [N, hidden_dim]
-        problem_repr = combined[0:1]   # [1, hidden_dim]
+        # Step 4: Extract learned representations
+        candidate_repr = combined[1:]  # [N, 768] - candidate representations
+        problem_repr = combined[0:1]   # [1, 768] - problem representation
         
-        # Calculate interaction scores
+        # Step 5: Calculate relevance scores (two components)
+        
+        # 5a. Interaction score: How well does candidate align with problem?
         interaction_scores = torch.matmul(candidate_repr, problem_repr.T).squeeze(-1)  # [N]
         
-        # Additional scoring through projection
+        # 5b. Projection score: Additional learned scoring (captures non-linear patterns)
         projected_scores = self.score_projection(candidate_repr).squeeze(-1)  # [N]
         
-        # Combine scores
+        # Combine both scoring mechanisms
         final_scores = interaction_scores + projected_scores
         
-        # Apply adaptive temperature and softmax
+        # Step 6: Apply adaptive temperature softmax
+        # Temperature τ is learned: high τ = more uniform (explore), low τ = sharper (exploit)
         temperature = torch.clamp(self.temperature, min=0.1, max=2.0)
         probs = F.softmax(final_scores / temperature, dim=0)
         
