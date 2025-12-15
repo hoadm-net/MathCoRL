@@ -97,6 +97,7 @@ class APIUsageLog:
     context: str
     success: bool
     error_message: str = ""
+    seed: Optional[int] = None  # Random seed used for reproducibility
     
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for JSON serialization."""
@@ -214,7 +215,8 @@ class APITracker:
                   question: str,
                   context: str = "",
                   success: bool = True,
-                  error_message: str = "") -> APIUsageLog:
+                  error_message: str = "",
+                  seed: Optional[int] = None) -> APIUsageLog:
         """
         Log API usage data.
         
@@ -228,6 +230,7 @@ class APITracker:
             context: Problem context
             success: Whether the request was successful
             error_message: Error message if failed
+            seed: Random seed used for reproducibility
             
         Returns:
             APIUsageLog object
@@ -250,7 +253,8 @@ class APITracker:
             question=question[:200] + "..." if len(question) > 200 else question,  # Truncate long questions
             context=context[:200] + "..." if len(context) > 200 else context,  # Truncate long context
             success=success,
-            error_message=error_message
+            error_message=error_message,
+            seed=seed
         )
         
         # Write to log file
@@ -261,9 +265,10 @@ class APITracker:
             logger.error(f"Failed to write to log file: {e}")
         
         # Log summary to console
+        seed_info = f", Seed: {seed}" if seed is not None else ""
         logger.info(f"API Call - Method: {method}, Model: {model}, "
                    f"Tokens: {input_tokens}→{output_tokens} ({input_tokens + output_tokens} total), "
-                   f"Cost: ${total_cost:.6f}, Time: {execution_time:.2f}s")
+                   f"Cost: ${total_cost:.6f}, Time: {execution_time:.2f}s{seed_info}")
         
         return log_entry
     

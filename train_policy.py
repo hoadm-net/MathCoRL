@@ -26,6 +26,7 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from mint.icrl.trainer import PolicyNetworkTrainer
 from mint.config import load_config
+from mint.reproducibility import set_seed, add_seed_argument
 
 # Configure logging
 logging.basicConfig(
@@ -143,7 +144,14 @@ Dataset Configurations:
         help='Overwrite existing model files'
     )
     
+    # Reproducibility
+    add_seed_argument(parser)
+    
     args = parser.parse_args()
+    
+    # Set seed for reproducibility
+    set_seed(args.seed)
+    logger.info(f"🎲 Random seed set to: {args.seed}")
     
     # Handle save_best logic
     save_best = args.save_best and not args.no_save_best

@@ -33,6 +33,7 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from comparison_study_generic import GenericComparisonStudy
 from mint.config import load_config
+from mint.reproducibility import set_seed, add_seed_argument
 
 # Configure logging
 logging.basicConfig(
@@ -145,7 +146,14 @@ Dataset Information:
                        help='Comma-separated list of methods to compare (default: zero-shot,random,policy,kate,cds). '
                             'Available: zero-shot, random, policy, kate, cds')
     
+    # Reproducibility
+    add_seed_argument(parser)
+    
     args = parser.parse_args()
+    
+    # Set seed for reproducibility
+    set_seed(args.seed)
+    logger.info(f"🎲 Random seed set to: {args.seed}")
     
     # Set logging level
     if args.verbose:

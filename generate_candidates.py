@@ -25,6 +25,7 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from mint.icrl.candidate_generator import CandidateGenerator
 from mint.config import load_config
+from mint.reproducibility import set_seed, add_seed_argument
 
 # Configure logging
 logging.basicConfig(
@@ -106,7 +107,14 @@ Supported Datasets:
         help='Overwrite existing candidate files'
     )
     
+    # Reproducibility
+    add_seed_argument(parser)
+    
     args = parser.parse_args()
+    
+    # Set seed for reproducibility
+    set_seed(args.seed)
+    logger.info(f"🎲 Random seed set to: {args.seed}")
     
     # Set logging level
     if args.verbose:
