@@ -33,7 +33,7 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from comparison_study_generic import GenericComparisonStudy
 from mint.config import load_config
-from mint.reproducibility import set_seed, add_seed_argument
+from mint.reproducibility import set_seed
 
 # Configure logging
 logging.basicConfig(
@@ -145,9 +145,6 @@ Dataset Information:
     parser.add_argument('--methods', type=str, default='zero-shot,random,policy,kate,cds',
                        help='Comma-separated list of methods to compare (default: zero-shot,random,policy,kate,cds). '
                             'Available: zero-shot, random, policy, kate, cds')
-    
-    # Reproducibility
-    add_seed_argument(parser)
     
     args = parser.parse_args()
     

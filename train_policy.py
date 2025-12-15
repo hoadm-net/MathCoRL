@@ -25,7 +25,7 @@ load_dotenv()
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from mint.icrl.trainer import PolicyNetworkTrainer
-from mint.config import load_config
+from mint.config import load_config, get_dataset_config, get_training_config
 from mint.reproducibility import set_seed, add_seed_argument
 
 # Configure logging
@@ -163,17 +163,10 @@ Dataset Configurations:
     
     # Load configuration
     config = load_config()
+    training_config = get_training_config()
     
-    # Dataset-specific configurations
-    dataset_configs = {
-        'GSM8K': {'pool_size': 20, 'k': 2, 'lr': 3e-4},
-        'SVAMP': {'pool_size': 15, 'k': 2, 'lr': 3e-4},
-        'TabMWP': {'pool_size': 25, 'k': 3, 'lr': 2e-4},
-        'TAT-QA': {'pool_size': 25, 'k': 3, 'lr': 2e-4},
-        'FinQA': {'pool_size': 30, 'k': 3, 'lr': 1e-4}
-    }
-    
-    dataset_config = dataset_configs[args.dataset]
+    # Get dataset-specific configuration from YAML
+    dataset_config = get_dataset_config(args.dataset)
     
     # Override with command line arguments if provided
     pool_size = args.pool_size or dataset_config['pool_size']

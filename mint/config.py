@@ -3,9 +3,10 @@ Configuration for MINT - Mathematical Intelligence Library.
 """
 
 import os
+import yaml
 from pathlib import Path
 from dotenv import load_dotenv
-from typing import Optional, List
+from typing import Optional, List, Dict, Any
 from openai import OpenAI
 import logging
 
@@ -15,6 +16,9 @@ load_dotenv()
 # Project root directory
 PROJECT_ROOT = Path(__file__).parent.parent
 
+# Configuration file path
+CONFIG_FILE = PROJECT_ROOT / "configs" / "hyperparameters.yaml"
+
 # Data and template directories
 DATA_DIR = PROJECT_ROOT / "datasets"
 TPL_DIR = PROJECT_ROOT / "templates"
@@ -23,27 +27,100 @@ MODEL_DIR = PROJECT_ROOT / "models"
 LOG_DIR = PROJECT_ROOT / "logs"
 
 # Create directories if they don't exist
-for directory in [RESULT_DIR, MODEL_DIR, LOG_DIR]:
+for directory in [RESULT_DIR, MODEL_DIR, LOG_DIR, CONFIG_FILE.parent]:
     directory.mkdir(exist_ok=True)
 
 logger = logging.getLogger(__name__)
 
+# Cache for loaded hyperparameters
+_hyperparameters_cache: Optional[Dict[str, Any]] = None
+
+
+def load_hyperparameters(reload: bool = False) -> Dict[str, Any]:
+    """
+    Load hyperparameters from YAML file with caching.
+    
+    Args:
+        reload: Force reload from file (ignore cache)
+        
+    Returns:
+        Dictionary of hyperparameters
+    """
+    global _hyperparameters_cache
+    
+    # Return cached version if available and not forcing reload
+    if _hyperparameters_cache is not None and not reload:
+        return _hyperparameters_cache
+    
+    try:
+        if CONFIG_FILE.exists():
+            with open(CONFIG_FILE, 'r') as f:
+                _hyperparameters_cache = yaml.safe_load(f)
+                logger.debug(f"Loaded hyperparameters from {CONFIG_FILE}")
+                return _hyperparameters_cache
+        else:
+            logger.warning(f"Hyperparameters file not found: {CONFIG_FILE}")
+            logger.warning("Using default values from environment variables")
+            return {}
+    except Exception as e:
+        logger.error(f"Failed to load hyperparameters: {e}")
+        return {}
+
+
+def get_hyperparameter(path: str, default: Any = None) -> Any:
+    """
+    Get a hyperparameter value by dot-separated path.
+    
+    Args:
+        path: Dot-separated path (e.g., 'llm.openai.temperature')
+        default: Default value if path not found
+        
+    Returns:
+        Hyperparameter value or default
+        
+    Examples:
+        >>> get_hyperparameter('llm.openai.temperature', 0.0)
+        0.0
+        >>> get_hyperparameter('policy_network.hidden_dim', 768)
+        768
+    """
+    params = load_hyperparameters()
+    
+    keys = path.split('.')
+    value = params
+    
+    for key in keys:
+        if isinstance(value, dict) and key in value:
+            value = value[key]
+        else:
+            return default
+    
+    return value
+
 
 def load_config():
-    """Load configuration from environment variables."""
+    """
+    Load configuration from environment variables with hyperparameter fallbacks.
+    
+    Environment variables take precedence over YAML config.
+    """
+    # Load hyperparameters
+    params = load_hyperparameters()
+    
+    # Get values with env var priority
     return {
         'openai_api_key': os.getenv('OPENAI_API_KEY'),
         'anthropic_api_key': os.getenv('ANTHROPIC_API_KEY'),
-        'model': os.getenv('DEFAULT_MODEL', 'gpt-4o-mini'),
-        'anthropic_model': os.getenv('ANT_DEFAULT_MODEL', 'claude-3-5-sonnet-20241022'),
-        'embedding_model': os.getenv('EMBEDDING_MODEL', 'text-embedding-3-small'),
-        'temperature': float(os.getenv('TEMPERATURE', '0.0')),
-        'max_tokens': int(os.getenv('MAX_TOKENS', '1000')),
+        'model': os.getenv('DEFAULT_MODEL') or get_hyperparameter('llm.openai.model', 'gpt-4o-mini'),
+        'anthropic_model': os.getenv('ANT_DEFAULT_MODEL') or get_hyperparameter('llm.claude.model', 'claude-3-5-sonnet-20241022'),
+        'embedding_model': os.getenv('EMBEDDING_MODEL') or get_hyperparameter('llm.embedding.model', 'text-embedding-3-small'),
+        'temperature': float(os.getenv('TEMPERATURE') or get_hyperparameter('llm.openai.temperature', 0.0)),
+        'max_tokens': int(os.getenv('MAX_TOKENS') or get_hyperparameter('llm.openai.max_tokens', 1000)),
         'provider': os.getenv('LLM_PROVIDER', 'openai').lower(),  # 'openai' or 'claude'
         'langchain_tracing': os.getenv('LANGCHAIN_TRACING_V2', 'false').lower() == 'true',
         'langchain_api_key': os.getenv('LANGCHAIN_API_KEY'),
         'langchain_project': os.getenv('LANGCHAIN_PROJECT', 'MathCoRL-FPP'),
-        'log_level': os.getenv('LOG_LEVEL', 'INFO'),
+        'log_level': os.getenv('LOG_LEVEL') or get_hyperparameter('logging.level', 'INFO'),
         'debug_mode': os.getenv('DEBUG_MODE', 'false').lower() == 'true',
     }
 
@@ -188,3 +265,93 @@ def get_current_model_name(provider: str = None):
     else:
         return config['model']
 
+
+def get_dataset_config(dataset: str) -> Dict[str, Any]:
+    """
+    Get dataset-specific configuration.
+    
+    Args:
+        dataset: Dataset name (e.g., 'GSM8K', 'SVAMP')
+        
+    Returns:
+        Dictionary with dataset-specific settings (k, pool_size, lr, etc.)
+    """
+    params = load_hyperparameters()
+    
+    if 'datasets' in params and dataset in params['datasets']:
+        return params['datasets'][dataset]
+    
+    # Default fallback
+    logger.warning(f"No config found for dataset {dataset}, using defaults")
+    return {
+        'k': 2,
+        'pool_size': 20,
+        'lr': 3e-4,
+        'train_split': 0.8
+    }
+
+
+def get_policy_network_config() -> Dict[str, Any]:
+    """
+    Get policy network architecture configuration.
+    
+    Returns:
+        Dictionary with network architecture settings
+    """
+    params = load_hyperparameters()
+    
+    if 'policy_network' in params:
+        return params['policy_network']
+    
+    # Default fallback
+    return {
+        'emb_dim': 1536,
+        'hidden_dim': 768,
+        'num_heads': 8,
+        'dropout': 0.1
+    }
+
+
+def get_training_config() -> Dict[str, Any]:
+    """
+    Get training configuration.
+    
+    Returns:
+        Dictionary with training settings
+    """
+    params = load_hyperparameters()
+    
+    if 'training' in params:
+        return params['training']
+    
+    # Default fallback
+    return {
+        'optimizer': 'Adam',
+        'default_lr': 3e-4,
+        'default_epochs': 10,
+        'eval_frequency': 3,
+        'samples_per_epoch': None
+    }
+
+
+def get_reward_config() -> Dict[str, Any]:
+    """
+    Get reward function configuration.
+    
+    Returns:
+        Dictionary with reward weights and settings
+    """
+    params = load_hyperparameters()
+    
+    if 'reward' in params:
+        return params['reward']
+    
+    # Default fallback
+    return {
+        'lambda_accuracy': 0.6,
+        'lambda_similarity': 0.3,
+        'lambda_diversity': 0.1,
+        'normalize': True,
+        'incorrect_penalty': -1.0,
+        'timeout_penalty': -0.5
+    }

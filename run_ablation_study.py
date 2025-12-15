@@ -35,7 +35,7 @@ from mint.testing import DatasetLoader
 from mint.evaluation import get_tolerance_function
 from mint.utils import evaluate_result
 from mint.tracking import get_tracker
-from mint.reproducibility import set_seed, add_seed_argument
+from mint.reproducibility import set_seed
 
 # Configure logging
 logging.basicConfig(
@@ -416,9 +416,6 @@ Ablation Comparison:
         action='store_true',
         help='Enable verbose logging'
     )
-    
-    # Reproducibility
-    add_seed_argument(parser)
     
     args = parser.parse_args()
     

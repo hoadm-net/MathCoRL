@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import logging
+from typing import Optional
 
 logger = logging.getLogger(__name__)
 
@@ -23,44 +24,51 @@ class PolicyNetwork(nn.Module):
     - probs: probability distribution over candidates for selection
     """
 
-    def __init__(self, emb_dim=1536, hidden_dim=768, num_heads=8, dropout=0.1):
+    def __init__(self, emb_dim: Optional[int] = None, hidden_dim: Optional[int] = None, 
+                 num_heads: Optional[int] = None, dropout: Optional[float] = None):
         super().__init__()
         
-        self.emb_dim = emb_dim
-        self.hidden_dim = hidden_dim
-        self.num_heads = num_heads
+        # Load defaults from config if not provided
+        from ..config import get_policy_network_config
+        config = get_policy_network_config()
+        
+        self.emb_dim = emb_dim or config.get('emb_dim', 1536)
+        self.hidden_dim = hidden_dim or config.get('hidden_dim', 768)
+        self.num_heads = num_heads or config.get('num_heads', 8)
+        dropout_rate = dropout if dropout is not None else config.get('dropout', 0.1)
+        dropout_rate = dropout if dropout is not None else config.get('dropout', 0.1)
         
         # Input projection
-        self.input_projection = nn.Linear(emb_dim, hidden_dim)
+        self.input_projection = nn.Linear(self.emb_dim, self.hidden_dim)
         
         # Multi-head attention for better representation learning
         self.attention = nn.MultiheadAttention(
-            embed_dim=hidden_dim,
-            num_heads=num_heads,
-            dropout=dropout,
+            embed_dim=self.hidden_dim,
+            num_heads=self.num_heads,
+            dropout=dropout_rate,
             batch_first=True
         )
         
         # Layer normalization
-        self.layer_norm1 = nn.LayerNorm(hidden_dim)
-        self.layer_norm2 = nn.LayerNorm(hidden_dim)
+        self.layer_norm1 = nn.LayerNorm(self.hidden_dim)
+        self.layer_norm2 = nn.LayerNorm(self.hidden_dim)
         
         # Feed-forward network
         self.ffn = nn.Sequential(
-            nn.Linear(hidden_dim, hidden_dim * 2),
+            nn.Linear(self.hidden_dim, self.hidden_dim * 2),
             nn.GELU(),
-            nn.Dropout(dropout),
-            nn.Linear(hidden_dim * 2, hidden_dim),
-            nn.Dropout(dropout)
+            nn.Dropout(dropout_rate),
+            nn.Linear(self.hidden_dim * 2, self.hidden_dim),
+            nn.Dropout(dropout_rate)
         )
         
         # Output projection for scoring
         self.score_projection = nn.Sequential(
-            nn.Linear(hidden_dim, hidden_dim // 2),
+            nn.Linear(self.hidden_dim, self.hidden_dim // 2),
             nn.GELU(),
-            nn.LayerNorm(hidden_dim // 2),
-            nn.Dropout(dropout),
-            nn.Linear(hidden_dim // 2, 1)
+            nn.LayerNorm(self.hidden_dim // 2),
+            nn.Dropout(dropout_rate),
+            nn.Linear(self.hidden_dim // 2, 1)
         )
         
         # Adaptive temperature for softmax

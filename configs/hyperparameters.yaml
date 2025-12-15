@@ -1,0 +1,215 @@
+# MathCoRL Hyperparameters Configuration
+# Central configuration file for all hyperparameters across the project
+
+# =============================================================================
+# LLM Model Settings
+# =============================================================================
+llm:
+  # OpenAI settings
+  openai:
+    model: "gpt-4o-mini"  # Default OpenAI model
+    temperature: 0.0      # Response randomness (0.0 = deterministic)
+    max_tokens: 1000      # Maximum response length
+  
+  # Claude/Anthropic settings  
+  claude:
+    model: "claude-3-5-sonnet-20241022"  # Default Claude model
+    temperature: 0.0      # Response randomness (0.0 = deterministic)
+    max_tokens: 1000      # Maximum response length
+  
+  # Embedding settings
+  embedding:
+    model: "text-embedding-3-small"  # OpenAI embedding model
+    dimension: 1536       # Embedding dimension
+
+# =============================================================================
+# Policy Network Architecture
+# =============================================================================
+policy_network:
+  emb_dim: 1536          # Input embedding dimension
+  hidden_dim: 768        # Hidden layer dimension
+  num_heads: 8           # Number of attention heads
+  dropout: 0.1           # Dropout rate for regularization
+
+# =============================================================================
+# Training Settings
+# =============================================================================
+training:
+  # Optimizer settings
+  optimizer: "Adam"      # Optimizer type
+  
+  # Learning rates per dataset (can be overridden per dataset)
+  default_lr: 3.0e-4    # Default learning rate
+  
+  # Training epochs
+  default_epochs: 10     # Default number of epochs
+  
+  # Samples per epoch
+  samples_per_epoch: null  # null = use all samples
+  
+  # Evaluation
+  eval_frequency: 3      # Evaluate every N epochs
+  
+  # PPO-specific settings
+  ppo:
+    clip_epsilon: 0.2    # PPO clipping parameter
+    value_coef: 0.5      # Value loss coefficient
+    entropy_coef: 0.01   # Entropy bonus coefficient
+
+# =============================================================================
+# Reward Function Settings
+# =============================================================================
+reward:
+  # Multi-objective reward weights
+  lambda_accuracy: 0.6   # Weight for correctness (λacc)
+  lambda_similarity: 0.3 # Weight for semantic similarity (λsim)
+  lambda_diversity: 0.1  # Weight for example diversity (λdiv)
+  
+  # Reward normalization
+  normalize: true        # Whether to normalize rewards
+  
+  # Penalties
+  incorrect_penalty: -1.0  # Penalty for incorrect solutions
+  timeout_penalty: -0.5    # Penalty for timeouts
+
+# =============================================================================
+# Dataset-Specific Settings
+# =============================================================================
+datasets:
+  # Each dataset can have custom k and pool_size
+  GSM8K:
+    k: 2                 # Number of examples for ICL
+    pool_size: 20        # Candidate pool size during training
+    lr: 3.0e-4          # Dataset-specific learning rate
+    train_split: 0.8     # Train/test split ratio
+  
+  SVAMP:
+    k: 2
+    pool_size: 15
+    lr: 3.0e-4
+    train_split: 0.8
+  
+  TabMWP:
+    k: 3
+    pool_size: 25
+    lr: 2.0e-4
+    train_split: 0.8
+  
+  TAT-QA:
+    k: 3
+    pool_size: 25
+    lr: 2.0e-4
+    train_split: 0.8
+  
+  FinQA:
+    k: 3
+    pool_size: 30
+    lr: 1.0e-4
+    train_split: 0.8
+
+# =============================================================================
+# Example Selection Methods
+# =============================================================================
+selection_methods:
+  # Random selection
+  random:
+    enabled: true
+  
+  # KATE (k-Nearest Examples)
+  kate:
+    enabled: true
+    metric: "cosine"     # Distance metric
+  
+  # CDS (Curriculum-based Selection)
+  cds:
+    enabled: true
+    difficulty_metric: "length"  # How to measure difficulty
+  
+  # Policy Network
+  policy:
+    enabled: true
+
+# =============================================================================
+# Candidate Generation Settings
+# =============================================================================
+candidate_generation:
+  n_candidates: 100      # Default number of candidates
+  max_retries: 3         # Max retries for failed generations
+  timeout: 30            # Timeout per candidate (seconds)
+  validate: true         # Validate generated code
+
+# =============================================================================
+# Evaluation Settings
+# =============================================================================
+evaluation:
+  # Comparison settings
+  n_samples: 100         # Default number of samples for comparison
+  
+  # Tolerance settings for numerical answers
+  tolerance:
+    relative: 1.0e-4     # Relative tolerance
+    absolute: 1.0e-6     # Absolute tolerance
+  
+  # Timeout settings
+  execution_timeout: 10  # Timeout for code execution (seconds)
+  
+  # Result saving
+  save_results: true     # Save detailed results
+  save_predictions: true # Save model predictions
+
+# =============================================================================
+# Reproducibility Settings
+# =============================================================================
+reproducibility:
+  default_seed: 42       # Default random seed
+  deterministic: true    # Enforce deterministic operations (may impact performance)
+  
+  # Components to seed
+  seed_python: true      # Python random module
+  seed_numpy: true       # NumPy
+  seed_torch: true       # PyTorch
+  seed_transformers: true # Transformers library
+
+# =============================================================================
+# Logging & Tracking Settings
+# =============================================================================
+logging:
+  level: "INFO"          # Logging level (DEBUG, INFO, WARNING, ERROR)
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  
+  # API tracking
+  track_api_usage: true  # Track API calls and costs
+  log_file: "logs/api_usage.jsonl"
+  
+  # Model saving
+  save_checkpoints: true # Save model checkpoints
+  checkpoint_frequency: 5 # Save every N epochs
+
+# =============================================================================
+# Directory Settings
+# =============================================================================
+directories:
+  data: "datasets"       # Dataset directory
+  templates: "templates" # Template directory
+  results: "results"     # Results output directory
+  models: "models"       # Model checkpoint directory
+  logs: "logs"           # Log directory
+  candidates: "candidates" # Candidate pool directory
+
+# =============================================================================
+# Performance Settings
+# =============================================================================
+performance:
+  # Parallelization
+  num_workers: 4         # Number of parallel workers
+  
+  # Batch processing
+  batch_size: 32         # Batch size for training
+  
+  # GPU settings
+  use_gpu: true          # Use GPU if available
+  gpu_device: 0          # GPU device ID
+  
+  # Memory optimization
+  gradient_accumulation: 1  # Gradient accumulation steps
+  mixed_precision: false    # Use mixed precision training
