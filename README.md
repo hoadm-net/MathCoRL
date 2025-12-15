@@ -108,16 +108,16 @@ python -m mint.cli export --format csv
 ### **Task 2: ICL Example Selection Methods**
 ```bash
 # Step 1: Generate candidate examples with embeddings
-python generate_candidates.py --dataset TAT-QA --n-candidates 100 --provider openai
+python generate_candidates.py --dataset TAT-QA --n-candidates 100 --seed 42
 
 # Step 2: Train Policy Network for example selection  
-python train_policy.py --dataset TAT-QA --epochs 3 --provider claude
+python train_policy.py --dataset TAT-QA --epochs 3 --seed 42
 
 # Step 3: Compare ICL example selection strategies
-python run_comparison.py --dataset TAT-QA --samples 150 --save-results --provider openai
+python run_comparison.py --dataset TAT-QA --samples 150 --save-results --seed 42
 
-# Cross-provider comparison
-python run_comparison.py --dataset GSM8K --methods policy,kate,cds --samples 50 --provider claude
+# Reproducibility: Use same seed for consistent results
+python run_comparison.py --dataset GSM8K --methods policy,kate,cds --samples 50 --seed 123
 ```
 
 ## 🔧 **Advanced Features**
@@ -194,6 +194,7 @@ mint/                              # Core package
 ├── cli.py                         # Unified command-line interface
 ├── config.py                      # Multi-provider configuration
 ├── tracking.py                    # Universal API tracking
+├── reproducibility.py             # Seed fixing for reproducibility
 ├── core.py                        # FPP implementation
 ├── cot.py, pal.py, pot.py        # Alternative prompting methods
 ├── zero_shot.py                   # Zero-shot baseline
@@ -218,6 +219,7 @@ CLI Interface → Provider Selection → Method Execution → Universal Tracking
 ### **Comprehensive Functionality**
 - ✅ **Dual LLM Provider Support**: Full OpenAI and Claude integration
 - ✅ **Universal API Tracking**: Accurate cost monitoring across providers
+- ✅ **Reproducibility**: Comprehensive seed fixing for consistent results
 - ✅ **Complete Method Suite**: 5 prompting methods + 5 ICL strategies
 - ✅ **Interactive CLI**: Real-time problem solving and testing
 - ✅ **Advanced Visualization**: Charts, exports, and analysis tools
