@@ -105,7 +105,7 @@ def execute_code(code: str) -> Tuple[Any, str]:
         code: Python code to execute
         
     Returns:
-        Tuple of (result, error_message)
+        Tuple of (result, error_message). error_message is None if no error.
     """
     try:
         # Create execution namespace with mathematical functions
@@ -116,11 +116,11 @@ def execute_code(code: str) -> Tuple[Any, str]:
         
         # Get result - check multiple possible variable names
         if 'result' in namespace:
-            return namespace['result'], ""
+            return namespace['result'], None
         elif 'answer' in namespace:
-            return namespace['answer'], ""
+            return namespace['answer'], None
         elif 'solution' in namespace:
-            return namespace['solution'], ""
+            return namespace['solution'], None
         else:
             return None, "Variable 'result', 'answer', or 'solution' not found in code"
             

@@ -1,0 +1,287 @@
+# Baseline Models Configuration for MathCoRL
+# Configuration for open-source baseline models (DeepSeek-R1, Qwen2.5-Math)
+
+# =============================================================================
+# Baseline Model Registry
+# =============================================================================
+models:
+  # DeepSeek-R1 Models (Distilled variants)
+  deepseek_r1_7b:
+    name: "DeepSeek-R1-Distill-Qwen-7B"
+    huggingface_id: "deepseek-ai/DeepSeek-R1-Distill-Qwen-7B"
+    provider: "huggingface"
+    size: "7B"
+    architecture: "Qwen"
+    description: "DeepSeek-R1 7B distilled from Qwen base"
+    paper: "https://arxiv.org/abs/2401.14196"
+    
+  deepseek_r1_1_5b:
+    name: "DeepSeek-R1-Distill-Qwen-1.5B"
+    huggingface_id: "deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B"
+    provider: "huggingface"
+    size: "1.5B"
+    architecture: "Qwen"
+    description: "Smaller DeepSeek-R1 variant for faster inference"
+    
+  deepseek_r1_14b:
+    name: "DeepSeek-R1-Distill-Llama-14B"
+    huggingface_id: "deepseek-ai/DeepSeek-R1-Distill-Llama-14B"
+    provider: "huggingface"
+    size: "14B"
+    architecture: "Llama"
+    description: "DeepSeek-R1 14B distilled from Llama base"
+    
+  deepseek_r1_8b:
+    name: "DeepSeek-R1-Distill-Llama-8B"
+    huggingface_id: "deepseek-ai/DeepSeek-R1-Distill-Llama-8B"
+    provider: "huggingface"
+    size: "8B"
+    architecture: "Llama"
+    description: "DeepSeek-R1 8B distilled from Llama base"
+  
+  # Qwen2.5-Math Models
+  qwen_math_7b:
+    name: "Qwen2.5-Math-7B-Instruct"
+    huggingface_id: "Qwen/Qwen2.5-Math-7B-Instruct"
+    provider: "huggingface"
+    size: "7B"
+    architecture: "Qwen"
+    description: "Qwen2.5 specialized for mathematical reasoning"
+    paper: "https://arxiv.org/abs/2309.16609"
+    
+  qwen_math_72b:
+    name: "Qwen2.5-Math-72B-Instruct"
+    huggingface_id: "Qwen/Qwen2.5-Math-72B-Instruct"
+    provider: "huggingface"
+    size: "72B"
+    architecture: "Qwen"
+    description: "Large Qwen2.5 model for mathematical reasoning"
+    note: "Requires significant GPU memory (40GB+ recommended)"
+
+# =============================================================================
+# Inference Settings per Model
+# =============================================================================
+inference:
+  # Default settings for all models
+  default:
+    temperature: 0.0
+    max_new_tokens: 1000
+    top_p: 1.0
+    do_sample: false
+    load_in_8bit: true
+    device: "cuda"
+    
+  # Model-specific overrides
+  deepseek_r1_7b:
+    load_in_8bit: true
+    max_memory: {0: "20GB"}  # Limit GPU memory usage
+    
+  deepseek_r1_1_5b:
+    load_in_8bit: false  # Small enough to run in FP16
+    
+  deepseek_r1_14b:
+    load_in_8bit: true
+    max_memory: {0: "22GB"}
+    
+  qwen_math_7b:
+    load_in_8bit: true
+    max_memory: {0: "20GB"}
+    
+  qwen_math_72b:
+    load_in_8bit: true
+    max_memory: {0: "40GB"}
+    note: "Requires A100 40GB or equivalent"
+
+# =============================================================================
+# Fairness Protocol Settings
+# =============================================================================
+fairness_protocol:
+  # Ensure fair comparison across all models
+  temperature: 0.0              # Deterministic generation
+  same_prompts: true            # Use identical prompts
+  same_exemplar_selection: true # Use same policy for example selection
+  no_finetuning: true          # No model-specific fine-tuning
+  fixed_seed: 42               # Fixed random seed
+  
+  # Validation
+  validate_outputs: true        # Validate all outputs for consistency
+  log_all_predictions: true    # Log predictions for analysis
+
+# =============================================================================
+# Evaluation Configuration
+# =============================================================================
+evaluation:
+  # Datasets to evaluate
+  datasets:
+    - GSM8K
+    - SVAMP
+    - TabMWP
+    - TAT-QA
+    - FinQA
+  
+  # Methods to test
+  methods:
+    - zero_shot
+    - few_shot
+    - cot
+    - pot
+    - pal
+    - fpp
+  
+  # Metrics to compute
+  metrics:
+    - accuracy
+    - token_count
+    - latency
+    - cost_estimate
+    - error_rate
+  
+  # Sample sizes per dataset (for quick testing)
+  sample_sizes:
+    quick: 50       # Quick test
+    standard: 100   # Standard evaluation
+    full: null      # Use entire test set
+
+# =============================================================================
+# Comparison Baselines
+# =============================================================================
+comparison_baselines:
+  # Commercial models for comparison
+  commercial:
+    - provider: "openai"
+      model: "gpt-4o-mini"
+      name: "GPT-4o-mini"
+    
+    - provider: "claude"
+      model: "claude-3-5-sonnet-20241022"
+      name: "Claude-3.5-Sonnet"
+  
+  # Open-source models
+  open_source:
+    - provider: "huggingface"
+      model: "deepseek_r1_7b"
+      name: "DeepSeek-R1-7B"
+    
+    - provider: "huggingface"
+      model: "qwen_math_7b"
+      name: "Qwen2.5-Math-7B"
+
+# =============================================================================
+# Hardware Requirements
+# =============================================================================
+hardware_requirements:
+  deepseek_r1_1_5b:
+    min_gpu_memory: "8GB"
+    recommended_gpu: "RTX 3060, RTX 3090"
+    estimated_inference_time: "~2s per problem"
+    
+  deepseek_r1_7b:
+    min_gpu_memory: "16GB"
+    recommended_gpu: "RTX 3090, RTX 4090, A100"
+    estimated_inference_time: "~3s per problem"
+    
+  deepseek_r1_14b:
+    min_gpu_memory: "24GB"
+    recommended_gpu: "RTX 3090, RTX 4090, A100"
+    estimated_inference_time: "~5s per problem"
+    
+  qwen_math_7b:
+    min_gpu_memory: "16GB"
+    recommended_gpu: "RTX 3090, RTX 4090, A100"
+    estimated_inference_time: "~3s per problem"
+    
+  qwen_math_72b:
+    min_gpu_memory: "40GB"
+    recommended_gpu: "A100 40GB, A100 80GB, H100"
+    estimated_inference_time: "~10s per problem"
+
+# =============================================================================
+# Cost Estimation (for comparison with API models)
+# =============================================================================
+cost_estimation:
+  # Local inference costs (electricity + amortized hardware)
+  local_inference:
+    electricity_per_kwh: 0.12  # USD
+    gpu_power_watts:
+      rtx_3090: 350
+      rtx_4090: 450
+      a100: 400
+    
+    # Amortized cost per hour (hardware depreciation)
+    amortized_cost_per_hour:
+      rtx_3090: 0.50
+      rtx_4090: 0.75
+      a100: 2.00
+  
+  # For comparison purposes
+  api_costs:
+    gpt_4o_mini:
+      input: 0.00015   # per 1K tokens
+      output: 0.0006   # per 1K tokens
+    
+    claude_3_5_sonnet:
+      input: 0.003     # per 1K tokens
+      output: 0.015    # per 1K tokens
+
+# =============================================================================
+# Download & Cache Settings
+# =============================================================================
+model_management:
+  # Cache directory for downloaded models
+  cache_dir: null  # null = use HuggingFace default (~/.cache/huggingface)
+  
+  # Auto-download models on first use
+  auto_download: true
+  
+  # Model download settings
+  download:
+    use_auth_token: false  # Set to true if models require authentication
+    revision: "main"       # Git revision to download
+    
+  # Disk space requirements
+  disk_space:
+    deepseek_r1_7b: "~14GB"
+    deepseek_r1_14b: "~28GB"
+    qwen_math_7b: "~14GB"
+    qwen_math_72b: "~144GB"
+
+# =============================================================================
+# Troubleshooting
+# =============================================================================
+troubleshooting:
+  common_issues:
+    out_of_memory:
+      solution: "Enable load_in_8bit or use smaller model variant"
+      
+    slow_inference:
+      solution: "Check GPU utilization with nvidia-smi, consider batch inference"
+      
+    download_failed:
+      solution: "Check internet connection, verify HuggingFace access"
+      
+    cuda_error:
+      solution: "Verify CUDA installation with torch.cuda.is_available()"
+
+# =============================================================================
+# Experiment Tracking
+# =============================================================================
+tracking:
+  # Save all baseline results
+  save_results: true
+  results_dir: "results/baselines"
+  
+  # Track metrics
+  metrics_to_track:
+    - accuracy
+    - precision
+    - recall
+    - f1_score
+    - avg_tokens_input
+    - avg_tokens_output
+    - avg_latency
+    - total_cost
+    - gpu_memory_peak
+    - errors_by_type
+  
+  # Comparison format
+  comparison_format: "markdown_table"  # or "latex_table", "json", "csv"

@@ -51,21 +51,18 @@ class PolicyNetworkTrainer:
         
         # Configuration
         self.config = load_config()
-        self.openai_client = openai_client or OpenAI(api_key=self.config.get('api_key'))
+        from mint.config import get_dataset_config
+        
+        self.openai_client = openai_client or OpenAI(api_key=self.config.get('openai_api_key'))
         self.reward_config = reward_config or RewardConfig()
         
-        # Dataset-specific configurations
-        self.dataset_configs = {
-            'SVAMP': {'pool_size': 15, 'k': 2, 'lr': 3e-4},
-            'GSM8K': {'pool_size': 20, 'k': 2, 'lr': 3e-4},
-            'TabMWP': {'pool_size': 25, 'k': 3, 'lr': 2e-4},
-            'TAT-QA': {'pool_size': 25, 'k': 3, 'lr': 2e-4},
-            'FinQA': {'pool_size': 30, 'k': 3, 'lr': 1e-4}
-        }
-        
-        self.config_params = self.dataset_configs.get(dataset_name, {
-            'pool_size': 20, 'k': 2, 'lr': 3e-4
-        })
+        # Load dataset-specific configuration from YAML
+        try:
+            self.config_params = get_dataset_config(dataset_name)
+        except KeyError:
+            # Fallback to hardcoded defaults if dataset not in YAML
+            logger.warning(f"Dataset {dataset_name} not found in hyperparameters.yaml, using defaults")
+            self.config_params = {'pool_size': 20, 'k': 2, 'lr': 3e-4}
         
         # Load candidates data
         self.candidates = self.load_candidates()
@@ -188,11 +185,15 @@ class PolicyNetworkTrainer:
         
         random.shuffle(training_data)
         
+        logger.debug(f"Training with {len(training_data)} samples, pool_size={self.config_params['pool_size']}")
+        
         # Training metrics
         total_loss = 0.0
         total_reward = 0.0
         correct_predictions = 0
         total_predictions = 0
+        failed_steps = 0  # Track failed training steps
+        skipped_steps = 0  # Track skipped steps
         
         # Training loop
         progress_bar = tqdm(training_data, desc=f"Epoch {epoch}")
@@ -205,12 +206,18 @@ class PolicyNetworkTrainer:
                 # Exclude target problem from its own pool (prevent trivial selection)
                 available_candidates = [c for c in self.candidates if c != problem]
                 
-                if len(available_candidates) < self.config_params['pool_size']:
+                # Adjust pool size if not enough candidates available
+                actual_pool_size = min(self.config_params['pool_size'], len(available_candidates))
+                
+                if actual_pool_size < self.config_params['k']:
+                    # Not enough candidates to select k examples
+                    logger.debug(f"Skipping problem: only {actual_pool_size} candidates, need at least {self.config_params['k']}")
+                    skipped_steps += 1
                     continue
                     
                 # Random sampling of pool_size candidates (uniform distribution)
                 # Rationale: Ensures policy learns from diverse contexts
-                candidate_pool = random.sample(available_candidates, self.config_params['pool_size'])
+                candidate_pool = random.sample(available_candidates, actual_pool_size)
                 
                 # ====================================================================
                 # Step 2: Convert to Tensors
@@ -306,7 +313,10 @@ class PolicyNetworkTrainer:
                 })
                 
             except Exception as e:
-                logger.warning(f"Training step failed: {e}")
+                failed_steps += 1
+                logger.error(f"Training step failed ({failed_steps} total): {e}")
+                import traceback
+                logger.debug(traceback.format_exc())
                 continue
         
         # Calculate epoch metrics
@@ -314,8 +324,18 @@ class PolicyNetworkTrainer:
             'loss': total_loss / max(total_predictions, 1),
             'reward': total_reward / max(total_predictions, 1),
             'accuracy': correct_predictions / max(total_predictions, 1),
-            'total_samples': total_predictions
+            'total_samples': total_predictions,
+            'failed_steps': failed_steps,
+            'skipped_steps': skipped_steps
         }
+        
+        if total_predictions == 0:
+            logger.warning(f"⚠️  No successful training iterations!")
+            logger.warning(f"   Total training data: {len(training_data)}")
+            logger.warning(f"   Skipped steps: {skipped_steps}")
+            logger.warning(f"   Failed steps: {failed_steps}")
+            logger.warning(f"   Config pool_size: {self.config_params['pool_size']}")
+            logger.warning(f"   Total candidates: {len(self.candidates)}")
         
         return epoch_metrics
 

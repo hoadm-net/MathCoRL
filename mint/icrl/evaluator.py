@@ -27,7 +27,7 @@ class PolicyNetworkEvaluator:
     def __init__(self, openai_client: OpenAI = None, model: str = None):
         """Initialize evaluator with OpenAI client for GPT evaluation"""
         self.config = load_config()
-        self.openai_client = openai_client or OpenAI(api_key=self.config.get('api_key'))
+        self.openai_client = openai_client or OpenAI(api_key=self.config.get('openai_api_key'))
         self.model = model or self.config.get('model', 'gpt-4o-mini')
         
         # Function prototypes for code generation
@@ -87,11 +87,23 @@ class PolicyNetworkEvaluator:
             # Execute generated code
             generated_code = response.choices[0].message.content.strip()
             
-            # Clean code (remove markdown blocks if present)
+            # Clean code (extract all code from markdown blocks)
             if "```python" in generated_code:
-                generated_code = generated_code.split("```python")[1].split("```")[0].strip()
+                # Extract all python code blocks and join them
+                code_blocks = []
+                parts = generated_code.split("```python")
+                for part in parts[1:]:  # Skip first part before any code block
+                    if "```" in part:
+                        code_blocks.append(part.split("```")[0].strip())
+                generated_code = "\n".join(code_blocks)
             elif "```" in generated_code:
-                generated_code = generated_code.split("```")[1].split("```")[0].strip()
+                # Extract all generic code blocks
+                code_blocks = []
+                parts = generated_code.split("```")
+                for i, part in enumerate(parts):
+                    if i % 2 == 1:  # Odd indices are code blocks
+                        code_blocks.append(part.strip())
+                generated_code = "\n".join(code_blocks)
             
             result, error = execute_code(generated_code)
             
@@ -106,7 +118,9 @@ class PolicyNetworkEvaluator:
             return success, result if result is not None else 0.0
             
         except Exception as e:
-            logger.debug(f"GPT solve failed: {e}")
+            logger.error(f"GPT solve failed: {e}")
+            import traceback
+            logger.debug(traceback.format_exc())
             return False, 0.0
 
     def select_with_policy(self, policy_net: torch.nn.Module, problem: Dict[str, Any], 
@@ -124,7 +138,7 @@ class PolicyNetworkEvaluator:
                 
                 # Sample k examples based on probabilities
                 selected_indices = torch.multinomial(probs, k, replacement=False)
-                selected_examples = [candidate_pool[i] for i in selected_indices]
+                selected_examples = [candidate_pool[i.item()] for i in selected_indices]
                 
                 return selected_examples
                 

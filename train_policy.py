@@ -31,10 +31,11 @@ from mint.reproducibility import set_seed, add_seed_argument
 
 # Configure logging
 logging.basicConfig(
-    level=logging.INFO,
+    level=logging.WARNING,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 
 def main():

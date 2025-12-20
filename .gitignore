@@ -4,7 +4,8 @@ __pycache__/
 .env
 
 # Large result files (keep structure, ignore large datasets)
-results/*.json
+results/**/*.json
+results/**/*.md
 !results/.gitkeep
 
 # macOS
@@ -25,6 +26,6 @@ charts/*
 
 # Experiment data exports
 *_experiment_data.json
-tracking_export_*.jsonvenv/
+tracking_export_*.json
 
 plans.txt

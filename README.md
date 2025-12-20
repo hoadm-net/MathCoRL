@@ -3,53 +3,46 @@
 [![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-Research framework for mathematical reasoning with dual LLM providers (OpenAI, Claude) and reinforcement learning-based example selection.
+Research framework for mathematical reasoning with multiple LLM backends (OpenAI API, Claude API, Open-Source HuggingFace models) and reinforcement learning-based example selection.
 
-## 🎯 **Dual Research Framework**
+## 🎯 **Multi-Backend Research Framework**
 
-MathCoRL supports two complementary research directions with comprehensive tracking, evaluation, and dual LLM provider support:
+MathCoRL supports three LLM backends for comprehensive mathematical reasoning research:
 
-### **📚 Task 1: Prompting Method Comparison**
-Compare different prompting techniques for mathematical reasoning:
-- **Interface**: Unified CLI interface with dual provider support
-- **Methods**: FPP, CoT, PAL, PoT, Zero-shot
-- **Providers**: OpenAI (GPT-4o, GPT-4, GPT-3.5) & Claude (3.5 Sonnet, Opus, Haiku)
-- **Purpose**: Evaluate which prompting strategy and provider works best for mathematical problems
-- **Features**: Real-time API tracking, cost monitoring, comprehensive evaluation, interactive mode
+### **🔌 LLM Provider Support**
 
-### **🧠 Task 2: In-Context Learning (ICL) Method Comparison**  
-Compare different example selection strategies within Function Prototype Prompting:
-- **Pipeline**: 3-script workflow for end-to-end ICL research
-- **Methods**: Policy Network, KATE, CDS, Random Selection, Zero-shot
-- **Providers**: Full support for both OpenAI and Claude models
-- **Purpose**: Evaluate which example selection strategy works best for in-context learning
-- **Features**: Neural policy networks, multi-objective training, reinforcement learning
-
-## 🤖 **Dual LLM Provider Support**
-
-### **OpenAI Integration**
+#### **1. OpenAI API**
 - **Models**: GPT-4o, GPT-4, GPT-3.5-turbo (all variants)
 - **Features**: Complete API integration with accurate token counting
-- **Pricing**: Real-time cost tracking with up-to-date pricing
 - **Status**: ✅ Fully supported and tested
 
-### **Claude Integration** 
-- **Models**: Claude 3.5 Sonnet, Claude 3 Opus, Claude 3 Haiku (all variants)
+#### **2. Claude API** 
+- **Models**: Claude 3.5 Sonnet, Claude 3 Opus, Claude 3 Haiku
 - **Features**: Native Anthropic API integration via LangChain
-- **Pricing**: Comprehensive cost tracking for all Claude models
 - **Status**: ✅ Fully supported and tested
 
-### **Provider Switching**
-```bash
-# Use OpenAI (default)
-python -m mint.cli solve --method fpp --provider openai --question "What is 15 + 27?"
+#### **3. Open-Source Models (HuggingFace)**
+- **Models**: 
+  - DeepSeek-R1 (1.5B, 7B, 14B)
+  - Qwen2.5-Math (7B, 72B)
+- **Features**: Local GPU inference, zero API cost
+- **Requirements**: CUDA GPU recommended (tested on RTX 3090 24GB)
+- **Status**: ✅ Fully supported with unified interface
 
-# Use Claude  
-python -m mint.cli solve --method fpp --provider claude --question "What is 15 + 27?"
+### **📚 Prompting Methods**
 
-# Set default provider in environment
-export LLM_PROVIDER=claude  # or openai
-```
+Compare different prompting techniques:
+- **Zero-Shot**: Direct problem solving without examples
+- **Few-Shot**: Random example selection from candidate pool
+- **FPP (Function Prototype Prompting)**: With policy network example selection
+- **CoT, PAL, PoT**: Additional baseline methods (API models only)
+
+### **🧠 In-Context Learning (ICL) Research**
+Compare example selection strategies:
+- **Policy Network**: Reinforcement learning-based selection
+- **KATE**: K-nearest neighbors with embeddings
+- **CDS**: Clustering-based diverse selection
+- **Random**: Baseline random sampling
 
 ## 📊 **Supported Research Datasets**
 
@@ -84,54 +77,62 @@ cd MathCoRL
 # Install dependencies
 pip install -r requirements.txt
 
-# Configure API keys
+# Configure API keys (optional for open-source models)
 cp env.example .env
 # Edit .env with your API keys:
-# OPENAI_API_KEY=your_openai_key
-# ANTHROPIC_API_KEY=your_anthropic_key  
-# LLM_PROVIDER=openai  # or claude
+# OPENAI_API_KEY=your_openai_key        # For API models
+# ANTHROPIC_API_KEY=your_anthropic_key  # For Claude
+# LLM_PROVIDER=openai                   # Default provider (openai/claude)
 ```
 
-### **Task 1: Compare Prompting Methods**
-```bash
-# Single problem solving with different methods and providers
-python -m mint.cli solve --method fpp --question "What is 15 + 27?" --provider openai
-python -m mint.cli solve --method cot --question "John has 20 apples. He gives 8 to his friend. How many are left?" --provider claude
-python -m mint.cli solve --method pal --question "Calculate the average of 10, 20, 30" --provider openai
+### **Quick Start Examples**
 
-# Dataset evaluation with cross-provider testing
+#### **Option 1: Open-Source Models (Zero Cost)**
+```bash
+# Test with DeepSeek-R1 7B on GSM8K
+python mathcorl_os.py test --method zero_shot --model deepseek_r1_7b --dataset GSM8K --samples 10
+
+# Compare all 3 methods (zero-shot, few-shot, fpp+policy)
+python mathcorl_os.py compare --model deepseek_r1_7b --dataset GSM8K --samples 50
+
+# Test with Qwen2.5-Math 7B
+python mathcorl_os.py compare --model qwen_math_7b --dataset TAT-QA --samples 50
+
+# Available models: deepseek_r1_7b, deepseek_r1_1.5b, qwen_math_7b, qwen_math_72b
+```
+
+#### **Option 2: API Models (OpenAI/Claude)**
+```bash
+# Single problem solving
+python -m mint.cli solve --method fpp --question "What is 15 + 27?" --provider openai
+python -m mint.cli solve --method cot --question "John has 20 apples..." --provider claude
+
+# Dataset evaluation
 python -m mint.cli test --method fpp --dataset SVAMP --limit 100 --provider openai
 python -m mint.cli test --method cot --dataset GSM8K --limit 50 --provider claude
-python -m mint.cli test --method pot --dataset TabMWP --limit 30 --provider openai
 
-# Interactive problem-solving mode
-python -m mint.cli interactive --provider claude
+# Interactive mode
 python -m mint.cli interactive --provider openai
-
-# Monitor API usage across providers
-python -m mint.cli stats
-python -m mint.cli stats --hours 12 --provider claude
-python -m mint.cli export --format csv
 ```
 
-### **Task 2: ICL Example Selection Methods**
+### **Policy Network Training & ICL Research**
 ```bash
 # Step 1: Generate candidate examples with embeddings
-python generate_candidates.py --dataset TAT-QA --n-candidates 100 --seed 42
+python generate_candidates.py --dataset TAT-QA --n-candidates 30 --seed 42
 
 # Step 2: Train Policy Network for example selection  
-python train_policy.py --dataset TAT-QA --epochs 3 --seed 42
+python train_policy.py --dataset TAT-QA --epochs 20 --seed 42
 
-# Step 3: Compare ICL example selection strategies
-python run_comparison.py --dataset TAT-QA --samples 150 --save-results --seed 42
+# Step 3: Compare ICL methods (works with both API and open-source)
+python run_comparison.py --dataset TAT-QA --samples 101 --seed 42
 
-# Reproducibility: Use same seed for consistent results
-python run_comparison.py --dataset GSM8K --methods policy,kate,cds --samples 50 --seed 123
+# Test with open-source models + policy network
+python mathcorl_os.py test --method fpp_policy --model deepseek_r1_7b --dataset GSM8K --samples 50
 ```
 
 ## 🔧 **Advanced Features**
 
-### **API Tracking & Cost Monitoring**
+### **API Tracking & Cost Monitoring (API Models)**
 ```bash
 # Real-time usage statistics
 python -m mint.cli stats                    # All providers, last 24h
@@ -141,59 +142,37 @@ python -m mint.cli stats --provider claude  # Claude only
 # Export detailed usage data
 python -m mint.cli export --format csv      # CSV export
 python -m mint.cli export --format json     # JSON export
-
-# Generate cost analysis charts  
-python -m mint.cli chart --type cost --save
-python -m mint.cli chart --type comparison --save
-python -m mint.cli chart --type usage --save
 ```
 
-### **Method Comparison Tools**
+### **Ablation Studies**
 ```bash
-# Compare all prompting methods on dataset
-python -m mint.cli compare --dataset SVAMP --limit 50 --provider openai
+# Pool size ablation (ICL research)
+python run_pool_size_ablation.py --dataset GSM8K --samples 101
 
-# Cross-provider method comparison
-python -m mint.cli compare --dataset GSM8K --limit 30 --provider claude
-
-# Ablation studies
+# Method comparison ablation
 python run_ablation_study.py --dataset SVAMP --methods fpp,cot,pal
-python run_ablation_triple.py --dataset TabMWP --samples 100
-```
-
-### **Visualization & Analysis**
-```bash
-# Generate performance charts
-python -m mint.cli chart --type performance --save
-
-# Export results for analysis
-python -m mint.cli export --format csv --save-path results/
-
-# View training progress
-python -m mint.cli training-history --dataset GSM8K
 ```
 
 ## 📈 **Research Methodology**
 
 ### **Prompting Methods** 
-- **FPP (Function Prototype Prompting)**: Structured reasoning with explicit function calls
-- **CoT (Chain-of-Thought)**: Step-by-step reasoning with natural language explanations
-- **PAL (Program-aided Language)**: Programming-based problem solving with code execution
-- **PoT (Program of Thoughts)**: Algorithmic decomposition with systematic thinking
-- **Zero-shot**: Direct problem solving without examples or special prompting
+- **Zero-Shot**: Direct problem solving without examples
+- **Few-Shot**: Random k examples from candidate pool
+- **FPP (Function Prototype Prompting)**: Structured reasoning with math functions + policy network selection
+- **CoT (Chain-of-Thought)**: Step-by-step natural language reasoning (API only)
+- **PAL/PoT**: Program-based reasoning (API only)
 
 ### **ICL Example Selection Strategies**
-- **Policy Network**: Neural network trained with reinforcement learning for adaptive selection
-- **KATE (k-Nearest Examples)**: Semantic similarity-based selection using embeddings
-- **CDS (Curriculum-based Selection)**: Progressive difficulty-based example ordering
-- **Random Selection**: Random sampling baseline for controlled comparison
-- **Zero-shot**: No examples baseline for measuring ICL contribution
+- **Policy Network**: Reinforcement learning-based adaptive selection (1536D→768D transformer)
+- **KATE**: k-Nearest neighbors with embedding similarity
+- **CDS**: Clustering-based diverse selection
+- **Random**: Baseline random sampling
 
-### **Cross-Provider Analysis**
-- **Performance Comparison**: Accuracy and reasoning quality across OpenAI vs Claude
-- **Cost Efficiency**: Token usage and cost per problem solved
-- **Method Suitability**: Which methods work best with which providers
-- **Scaling Behavior**: Performance changes with different model sizes
+### **Multi-Backend Architecture**
+- **API Models**: OpenAI/Claude via REST APIs with token tracking
+- **Open-Source**: HuggingFace models with local GPU inference
+- **Unified Interface**: Same prompting methods across all backends
+- **Cost Comparison**: $0 for open-source vs API pricing
 
 ## 🛠️ **Technical Architecture**
 
