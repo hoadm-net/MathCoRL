@@ -58,6 +58,18 @@ def mean(numbers: List[float]) -> float:
     return sum(numbers) / len(numbers) if numbers else 0
 
 
+def avg(*args) -> float:
+    """Calculate average of variable number of arguments."""
+    if not args:
+        return 0
+    # Handle both flat args and list/tuple args
+    if len(args) == 1 and isinstance(args[0], (list, tuple)):
+        numbers = args[0]
+    else:
+        numbers = args
+    return sum(numbers) / len(numbers) if numbers else 0
+
+
 def median(numbers: List[float]) -> float:
     """Calculate the median of a list of numbers."""
     if not numbers:

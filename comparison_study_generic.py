@@ -531,8 +531,11 @@ class GenericComparisonStudy:
             
             # Use Policy Network to select examples
             from openai import OpenAI
-            openai_client = OpenAI(api_key=self.fpp_instance.api_key)
-            evaluator = PolicyNetworkEvaluator(openai_client, self.fpp_instance.model)
+            import os
+            openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+            from mint.config import get_current_model_name
+            model = get_current_model_name('openai')
+            evaluator = PolicyNetworkEvaluator(openai_client, model)
             selected_examples = evaluator.select_with_policy(
                 policy_net=self.policy_network,
                 problem=problem_dict,

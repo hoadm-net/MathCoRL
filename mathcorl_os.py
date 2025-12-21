@@ -2,22 +2,26 @@
 """
 MathCoRL-OS - Open-Source Mathematical Reasoning
 
-Unified interface for open-source models (DeepSeek-R1, Qwen2.5-Math) with:
-- Zero-shot prompting
-- Few-shot with random examples
-- FPP + Policy Network (full pipeline)
+Unified interface for open-source models (DeepSeek-R1, Qwen2.5-Coder) with 5 methods:
+- Zero-shot: Direct problem solving without examples
+- CoT (Chain-of-Thought): Step-by-step reasoning
+- PAL (Program-Aided Language): Reasoning + code generation
+- PoT (Program of Thoughts): Direct code generation
+- FPP (Function Prototype Prompting): Structured with function prototypes
 
 Usage:
     # Test with different methods
     python mathcorl_os.py test --method zero_shot --model deepseek_r1_7b --dataset GSM8K --samples 50
-    python mathcorl_os.py test --method few_shot --model qwen_math_7b --dataset GSM8K --samples 50
-    python mathcorl_os.py test --method fpp_policy --model deepseek_r1_7b --dataset GSM8K --samples 50
+    python mathcorl_os.py test --method cot --model qwen_coder_7b --dataset GSM8K --samples 50
+    python mathcorl_os.py test --method pal --model deepseek_r1_7b --dataset GSM8K --samples 50
+    python mathcorl_os.py test --method pot --model qwen_coder_32b --dataset GSM8K --samples 50
+    python mathcorl_os.py test --method fpp --model deepseek_r1_7b --dataset GSM8K --samples 50
     
     # Compare all methods
     python mathcorl_os.py compare --model deepseek_r1_7b --dataset GSM8K --samples 101
     
     # Single problem solving
-    python mathcorl_os.py solve --method fpp_policy --model deepseek_r1_7b "What is 15 + 27?"
+    python mathcorl_os.py solve --method fpp --model qwen_coder_7b "What is 15 + 27?"
 """
 
 import argparse
@@ -38,7 +42,7 @@ from mint.testing import DatasetLoader
 from mint.utils import execute_code, clean_code
 from mint.config import get_dataset_config, create_standardized_embedding
 from mint.icrl.policy_network import PolicyNetwork
-from mint.providers.huggingface_provider import DeepSeekR1Provider, QwenMathProvider
+from mint.providers.huggingface_provider import DeepSeekR1Provider, QwenCoderProvider
 from mint.evaluation import get_tolerance_function
 import torch
 
@@ -67,9 +71,9 @@ class OpenSourceEvaluator:
     MODELS = {
         'deepseek_r1_7b': ('deepseek', '7B'),
         'deepseek_r1_1.5b': ('deepseek', '1.5B'),
-        'deepseek_r1_14b': ('deepseek', '14B'),
-        'qwen_math_7b': ('qwen', '7B'),
-        'qwen_math_72b': ('qwen', '72B')
+        'deepseek_r1_8b': ('deepseek', '8B'),
+        'qwen_coder_7b': ('qwen_coder', '7B'),
+        'qwen_coder_32b': ('qwen_coder', '32B'),
     }
     
     def __init__(self, model_name: str, dataset_name: str):
@@ -91,9 +95,21 @@ class OpenSourceEvaluator:
         # Load provider
         print(f"🔄 Loading {model_name}...")
         if model_type == 'deepseek':
-            self.provider = DeepSeekR1Provider(model_variant=variant, load_in_8bit=False)
-        elif model_type == 'qwen':
-            self.provider = QwenMathProvider(model_variant=variant, load_in_8bit=False)
+            # Use 4-bit quantization for 8B model to fit in memory better
+            use_4bit = (variant == '8B')
+            self.provider = DeepSeekR1Provider(
+                model_variant=variant, 
+                load_in_8bit=False,
+                load_in_4bit=use_4bit
+            )
+        elif model_type == 'qwen_coder':
+            # Use 4-bit quantization for 32B model
+            use_4bit = (variant == '32B')
+            self.provider = QwenCoderProvider(
+                model_variant=variant,
+                load_in_8bit=False,
+                load_in_4bit=use_4bit
+            )
         print(f"✅ Model loaded")
         
         # Load candidates
@@ -132,7 +148,7 @@ class OpenSourceEvaluator:
         print(f"✅ Tolerance function: {self.tolerance_func.__name__}")
     
     def create_zero_shot_prompt(self, question: str, context: str = "") -> str:
-        """Create zero-shot prompt for code generation."""
+        """Create zero-shot prompt for direct problem solving."""
         prompt = "You are a math expert. Solve the problem by writing Python code.\n\n"
         if context:
             prompt += f"Context: {context}\n\n"
@@ -141,6 +157,122 @@ class OpenSourceEvaluator:
         prompt += "Store the final answer in a variable named 'result'.\n"
         prompt += "Provide ONLY the Python code inside markdown code block.\n"
         return prompt
+    
+    def create_cot_prompt(self, question: str, context: str = "") -> str:
+        """Create Chain-of-Thought prompt with step-by-step reasoning."""
+        prompt = """You are an expert mathematician. Solve the problem step by step, showing your reasoning.
+
+Here are examples of how to solve problems step by step:
+
+Example 1:
+Problem: Janet's ducks lay 16 eggs per day. She eats 3 for breakfast and bakes muffins with 4. She sells the remainder at $2 per egg. How much does she make daily?
+
+Solution:
+Step 1: Calculate how many eggs are left to sell.
+- Total eggs per day: 16
+- Eggs Janet eats: 3
+- Eggs used for muffins: 4
+- Eggs left to sell: 16 - 3 - 4 = 9 eggs
+
+Step 2: Calculate daily earnings.
+- Price per egg: $2
+- Total earnings: 9 × $2 = $18
+
+Code:
+```python
+eggs_per_day = 16
+eggs_eaten = 3
+eggs_for_muffins = 4
+price_per_egg = 2
+eggs_to_sell = eggs_per_day - eggs_eaten - eggs_for_muffins
+result = eggs_to_sell * price_per_egg
+```
+
+Now solve this problem:
+
+"""
+        if context:
+            prompt += f"Context: {context}\n\n"
+        prompt += f"Problem: {question}\n\n"
+        prompt += "Provide your solution with reasoning steps and then Python code in a markdown code block.\n"
+        prompt += "The code must store the final answer in variable 'result'.\n"
+        return prompt
+    
+    def create_pal_prompt(self, question: str, context: str = "") -> str:
+        """Create PAL (Program-Aided Language) prompt combining reasoning and code."""
+        prompt = """You are a math expert. Solve problems by combining reasoning with Python code.
+
+Example:
+Problem: A school has 569 girls and 236 boys. How many more girls than boys?
+
+Solution:
+Reasoning: We need to find the difference between number of girls and boys.
+- Number of girls: 569
+- Number of boys: 236
+- We subtract boys from girls to get the difference
+
+Code:
+```python
+# Problem: difference between girls and boys
+girls = 569
+boys = 236
+result = girls - boys  # 569 - 236 = 333
+```
+
+Now solve this problem:
+
+"""
+        if context:
+            prompt += f"Context: {context}\n\n"
+        prompt += f"Problem: {question}\n\n"
+        prompt += "Provide both reasoning and Python code in a markdown code block.\n"
+        prompt += "Store the final answer in variable 'result'.\n"
+        return prompt
+    
+    def create_pot_prompt(self, question: str, context: str = "") -> str:
+        """Create PoT (Program of Thoughts) prompt for direct code generation."""
+        prompt = """You are an expert Python programmer. Generate Python code to solve mathematical problems.
+
+Example 1:
+Problem: Janet's ducks lay 16 eggs per day. She eats 3 for breakfast and bakes muffins with 4. She sells the remainder at $2 per egg. How much does she make daily?
+
+Code:
+```python
+# Janet's daily egg problem
+eggs_per_day = 16
+eggs_eaten = 3
+eggs_for_muffins = 4
+price_per_egg = 2
+
+# Calculate eggs left to sell
+eggs_to_sell = eggs_per_day - eggs_eaten - eggs_for_muffins
+
+# Calculate daily earnings
+result = eggs_to_sell * price_per_egg
+```
+
+Example 2:
+Problem: A school has 569 girls and 236 boys. How many more girls than boys?
+
+Code:
+```python
+# School population difference
+girls = 569
+boys = 236
+result = girls - boys
+```
+
+Now solve this problem:
+
+"""
+        if context:
+            prompt += f"Context: {context}\n\n"
+        prompt += f"Problem: {question}\n\n"
+        prompt += "Write Python code to solve this problem.\n"
+        prompt += "Store the final answer in variable 'result'.\n"
+        prompt += "Provide ONLY the code in a markdown code block.\n"
+        return prompt
+    
     
     def create_few_shot_prompt(self, question: str, examples: List[Dict], context: str = "") -> str:
         """Create few-shot prompt with examples."""
@@ -165,49 +297,23 @@ class OpenSourceEvaluator:
         return prompt
     
     def create_fpp_prompt(self, question: str, examples: List[Dict], context: str = "") -> str:
-        """Create FPP-style prompt with function prototypes and examples."""
+        """Create FPP-style prompt using standard templates (same as mathcorl.py)."""
+        from mint.prompts import create_fpp_with_examples_prompt
         
-        # Function prototypes (simplified version)
-        prompt = """You are a math expert. Use these Python functions to solve problems:
-
-def add(a, b): return a + b
-def sub(a, b): return a - b  
-def mul(a, b): return a * b
-def div(a, b): return a / b if b != 0 else 0
-def min_val(*args): return min(args)
-def max_val(*args): return max(args)
-def sum_vals(*args): return sum(args)
-def mean(*args): return sum(args) / len(args) if args else 0
-def round_val(x, n=0): return round(x, n)
-
-"""
-        
-        # Add examples
-        prompt += "Here are examples:\n\n"
-        for i, ex in enumerate(examples, 1):
-            prompt += f"Example {i}:\n"
-            if ex.get('context'):
-                prompt += f"Context: {ex['context']}\n"
-            prompt += f"Question: {ex['question']}\n"
-            prompt += f"Solution:\n```python\n{ex['code']}\n```\n"
-            prompt += f"Answer: {ex['answer']}\n\n"
-        
-        # Add test problem
-        prompt += "Now solve this problem using the functions above:\n"
-        if context:
-            prompt += f"Context: {context}\n"
-        prompt += f"Question: {question}\n\n"
-        prompt += "IMPORTANT: Provide ONLY the Python code solution in a markdown code block.\n"
-        prompt += "Do NOT include explanations or reasoning. Just the code.\n"
-        prompt += "Use the provided functions and store the final answer in 'result' variable.\n"
-        return prompt
+        # Use the standard FPP template from mint package
+        # This ensures consistency with OpenAI-based mathcorl.py
+        return create_fpp_with_examples_prompt(
+            question=question,
+            examples=examples,
+            context=context
+        )
     
     def solve_problem(self, sample: Dict, method: str) -> Dict[str, Any]:
         """Solve a single problem.
         
         Args:
             sample: Problem dictionary
-            method: 'zero_shot', 'few_shot', or 'fpp_policy'
+            method: 'zero_shot', 'cot', 'pal', 'pot', or 'fpp'
             
         Returns:
             Dict with keys: is_correct, predicted, elapsed, model_output, code, error
@@ -219,38 +325,72 @@ def round_val(x, n=0): return round(x, n)
             context = sample.get('context', '')
             ground_truth = sample['ground_truth']
             
-            # Select examples and create prompt based on method
+            # Create prompt based on method
             if method == 'zero_shot':
                 prompt = self.create_zero_shot_prompt(question, context)
+                max_tokens = 512
                 
-            elif method == 'few_shot':
+            elif method == 'cot':
+                prompt = self.create_cot_prompt(question, context)
+                max_tokens = 1024
+                
+            elif method == 'pal':
+                prompt = self.create_pal_prompt(question, context)
+                max_tokens = 1024
+                
+            elif method == 'pot':
+                prompt = self.create_pot_prompt(question, context)
+                max_tokens = 768
+                
+            elif method == 'fpp':
                 if not self.candidates:
-                    return False, None, time.time() - start_time
-                examples = random.sample(self.candidates, min(self.k, len(self.candidates)))
-                prompt = self.create_few_shot_prompt(question, examples, context)
+                    return {
+                        'is_correct': False,
+                        'predicted': None,
+                        'elapsed': time.time() - start_time,
+                        'model_output': '',
+                        'code': '',
+                        'error': 'No candidates available for FPP'
+                    }
                 
-            elif method == 'fpp_policy':
-                if not self.policy_network or not self.candidates:
-                    return False, None, time.time() - start_time
-                
-                # Policy selection
-                test_embedding = create_standardized_embedding(context=context, question=question)
-                with torch.no_grad():
-                    problem_emb = torch.tensor(test_embedding, dtype=torch.float32).unsqueeze(0)
-                    candidate_embs = torch.tensor([c['embedding'] for c in self.candidates], 
-                                                 dtype=torch.float32)
-                    probs = self.policy_network(problem_emb, candidate_embs)
-                    selected_indices = torch.multinomial(probs, self.k, replacement=False)
-                    examples = [self.candidates[i.item()] for i in selected_indices]
+                # Policy selection or random if no policy
+                if self.policy_network:
+                    test_embedding = create_standardized_embedding(context=context, question=question)
+                    with torch.no_grad():
+                        problem_emb = torch.tensor(test_embedding, dtype=torch.float32).unsqueeze(0)
+                        candidate_embs = torch.tensor([c['embedding'] for c in self.candidates], 
+                                                     dtype=torch.float32)
+                        probs = self.policy_network(problem_emb, candidate_embs)
+                        selected_indices = torch.multinomial(probs, self.k, replacement=False)
+                        examples = [self.candidates[i.item()] for i in selected_indices]
+                else:
+                    # Random selection if no policy network
+                    examples = random.sample(self.candidates, min(self.k, len(self.candidates)))
                 
                 prompt = self.create_fpp_prompt(question, examples, context)
+                max_tokens = 1024
             
             else:
                 raise ValueError(f"Unknown method: {method}")
             
-            # Generate with model (use more tokens for FPP)
-            max_tokens = 1024 if method == 'fpp_policy' else 512
+            # Debug: Print prompt length and first/last 200 chars
+            if os.getenv('DEBUG_PROMPTS'):
+                print(f"\n{'='*80}")
+                print(f"METHOD: {method}")
+                print(f"PROMPT LENGTH: {len(prompt)} chars")
+                print(f"PROMPT (first 200 chars):\n{prompt[:200]}...")
+                print(f"PROMPT (last 200 chars):\n...{prompt[-200:]}")
+                print(f"{'='*80}\n")
+            
+            # Generate with model
             response = self.provider.generate(prompt, max_new_tokens=max_tokens, temperature=0.0)
+            
+            # Debug: Print response length and content
+            if os.getenv('DEBUG_PROMPTS'):
+                print(f"\n{'='*80}")
+                print(f"RESPONSE LENGTH: {len(response)} chars")
+                print(f"RESPONSE:\n{response}")
+                print(f"{'='*80}\n")
             
             # Extract code
             code = None
@@ -283,8 +423,6 @@ def round_val(x, n=0): return round(x, n)
                     is_correct = (result == ground_truth)
                 else:
                     is_correct = self.tolerance_func(result, ground_truth)
-                # Debug: Always print comparison details
-                print(f"  DEBUG: result={result} ({type(result).__name__}), ground_truth={ground_truth} ({type(ground_truth).__name__}), is_correct={is_correct}, func={self.tolerance_func.__name__ if self.tolerance_func else 'None'}")
             
             return {
                 'is_correct': is_correct,
@@ -390,22 +528,20 @@ def round_val(x, n=0): return round(x, n)
         Returns:
             Comparison results
         """
-        methods = ['zero_shot', 'few_shot', 'fpp_policy']
+        methods = ['zero_shot', 'cot', 'pal', 'pot', 'fpp']
         results = {}
         
         for method in methods:
-            if method == 'few_shot' and not self.candidates:
+            # Skip FPP if no candidates
+            if method == 'fpp' and not self.candidates:
                 print(f"⚠️ Skipping {method} - no candidates")
-                continue
-            if method == 'fpp_policy' and (not self.policy_network or not self.candidates):
-                print(f"⚠️ Skipping {method} - policy network or candidates not available")
                 continue
             
             results[method] = self.test_method(method, n_samples)
         
         # Summary
         print(f"\n{'='*70}")
-        print(f"📊 COMPARISON SUMMARY")
+        print(f"📊 COMPARISON SUMMARY - 5 METHODS")
         print(f"{'='*70}")
         print(f"Model: {self.model_name}")
         print(f"Dataset: {self.dataset_name}")
@@ -438,12 +574,12 @@ def main():
     # Test command
     test_parser = subparsers.add_parser('test', help='Test a single method')
     test_parser.add_argument('--method', required=True, 
-                            choices=['zero_shot', 'few_shot', 'fpp_policy'],
+                            choices=['zero_shot', 'cot', 'pal', 'pot', 'fpp'],
                             help='Method to test')
     test_parser.add_argument('--model', required=True, 
                             choices=list(OpenSourceEvaluator.MODELS.keys()),
                             help='Model to use')
-    test_parser.add_argument('--dataset', required=True, choices=['GSM8K', 'TAT-QA'],
+    test_parser.add_argument('--dataset', required=True, choices=['GSM8K', 'SVAMP', 'TabMWP', 'TAT-QA', 'FinQA'],
                             help='Dataset to test on')
     test_parser.add_argument('--samples', type=int, default=100,
                             help='Number of samples to test')
@@ -453,11 +589,11 @@ def main():
                             help='Output JSON file')
     
     # Compare command
-    compare_parser = subparsers.add_parser('compare', help='Compare all methods')
+    compare_parser = subparsers.add_parser('compare', help='Compare all 5 methods')
     compare_parser.add_argument('--model', required=True,
                                choices=list(OpenSourceEvaluator.MODELS.keys()),
                                help='Model to use')
-    compare_parser.add_argument('--dataset', required=True, choices=['GSM8K', 'TAT-QA'],
+    compare_parser.add_argument('--dataset', required=True, choices=['GSM8K', 'SVAMP', 'TabMWP', 'TAT-QA', 'FinQA'],
                                help='Dataset to test on')
     compare_parser.add_argument('--samples', type=int, default=100,
                                help='Number of samples per method')

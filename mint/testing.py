@@ -26,6 +26,14 @@ class DatasetLoader:
     
     SUPPORTED_DATASETS = ['SVAMP', 'GSM8K', 'TABMWP', 'TAT-QA', 'TATQA', 'FINQA', 'FIN-QA']
     
+    def __init__(self, dataset_name: str):
+        """Initialize loader for specific dataset."""
+        self.dataset_name = dataset_name
+    
+    def load_test(self) -> List[Dict[str, Any]]:
+        """Load test data for the dataset."""
+        return self.load_dataset(self.dataset_name)
+    
     @staticmethod
     def load_dataset(dataset_name: str) -> List[Dict[str, Any]]:
         """

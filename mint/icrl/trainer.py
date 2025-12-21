@@ -399,7 +399,14 @@ class PolicyNetworkTrainer:
 
     def save_model(self, suffix: str = 'final'):
         """Save trained model"""
-        model_path = os.path.join(self.models_dir, f"{self.dataset_name}_policy_{suffix}.pt")
+        # If suffix looks like a full path, use it directly
+        if '/' in suffix or suffix.endswith('.pt'):
+            model_path = suffix
+        else:
+            model_path = os.path.join(self.models_dir, f"{self.dataset_name}_policy_{suffix}.pt")
+        
+        # Ensure directory exists
+        os.makedirs(os.path.dirname(model_path), exist_ok=True)
         
         checkpoint = {
             'model_state_dict': self.policy_net.state_dict(),
@@ -428,6 +435,132 @@ class PolicyNetworkTrainer:
             logger.error(f"Failed to load model: {e}")
             return False
 
+    def evaluate_full(self, n_samples: int = 100, verbose: bool = False) -> Dict[str, Any]:
+        """
+        Full evaluation with token tracking
+        
+        Args:
+            n_samples: Number of samples to evaluate
+            verbose: Whether to print detailed results
+            
+        Returns:
+            Dictionary with accuracy, reward, and token metrics
+        """
+        self.policy_net.eval()
+        
+        # Load test data
+        from ..testing import DatasetLoader
+        loader = DatasetLoader(self.dataset_name)
+        test_data = loader.load_test()
+        
+        # Sample subset if needed
+        if n_samples < len(test_data):
+            test_data = random.sample(test_data, n_samples)
+        
+        logger.info(f"Evaluating on {len(test_data)} samples...")
+        
+        # Evaluation metrics
+        correct = 0
+        total = 0
+        total_reward = 0.0
+        total_tokens = 0
+        
+        # Token tracking from API calls
+        # Read from logs instead of using get_api_stats (which doesn't exist)
+        def get_token_count():
+            log_file = "logs/api_usage.jsonl"
+            if not os.path.exists(log_file):
+                return 0
+            total = 0
+            with open(log_file, 'r') as f:
+                for line in f:
+                    try:
+                        data = json.loads(line.strip())
+                        total += data.get('total_tokens', 0)
+                    except:
+                        pass
+            return total
+        
+        # Get initial token count
+        initial_tokens = get_token_count()
+        
+        for problem in test_data:
+            try:
+                # Check if problem has embedding, if not create one
+                if 'embedding' not in problem:
+                    # Create embedding for test problem
+                    from ..config import create_standardized_embedding
+                    problem_text = problem.get('context', '') + ' ' + problem['question']
+                    problem['embedding'] = create_standardized_embedding(problem_text, self.openai_client)
+                
+                # Get available candidates (exclude target)
+                available = [c for c in self.candidates if c != problem]
+                if len(available) < self.config_params['k']:
+                    continue
+                
+                # Sample candidate pool
+                pool_size = min(self.config_params['pool_size'], len(available))
+                candidate_pool = random.sample(available, pool_size)
+                
+                # Convert to tensors
+                problem_emb = torch.tensor(problem['embedding'], dtype=torch.float32).unsqueeze(0)
+                candidate_embs = torch.tensor([c['embedding'] for c in candidate_pool], dtype=torch.float32)
+                
+                # Policy selection (greedy)
+                with torch.no_grad():
+                    probs = self.policy_net(problem_emb, candidate_embs)
+                    top_k_indices = torch.topk(probs, k=self.config_params['k']).indices
+                    chosen_examples = [candidate_pool[i] for i in top_k_indices]
+                
+                # Evaluate with GPT
+                is_correct, _ = self.evaluator.gpt_solve_with_examples(
+                    problem, chosen_examples, self.dataset_name
+                )
+                
+                # Calculate reward
+                example_embs = candidate_embs[top_k_indices]
+                reward = self.calculate_reward(is_correct, problem_emb, example_embs)
+                
+                if is_correct:
+                    correct += 1
+                total += 1
+                total_reward += reward
+                
+                if verbose and total % 10 == 0:
+                    logger.info(f"Progress: {total}/{len(test_data)} - Accuracy: {correct/total:.2%}")
+                    
+            except Exception as e:
+                logger.warning(f"Evaluation error: {e}")
+                continue
+        
+        # Get final token count
+        final_tokens = get_token_count()
+        tokens_used = final_tokens - initial_tokens
+        
+        # Calculate metrics
+        accuracy = correct / total if total > 0 else 0.0
+        avg_reward = total_reward / total if total > 0 else 0.0
+        avg_tokens = tokens_used / total if total > 0 else 0.0
+        
+        results = {
+            'accuracy': accuracy,
+            'correct': correct,
+            'total': total,
+            'avg_reward': avg_reward,
+            'token_usage': {
+                'total_tokens': tokens_used,
+                'avg_per_sample': avg_tokens
+            },
+            'avg_tokens': avg_tokens
+        }
+        
+        logger.info(f"\nEvaluation Results:")
+        logger.info(f"  Accuracy: {accuracy:.2%} ({correct}/{total})")
+        logger.info(f"  Avg Reward: {avg_reward:.4f}")
+        logger.info(f"  Avg Tokens: {avg_tokens:.1f}")
+        
+        return results
+    
     def evaluate_final_model(self, n_trials: int = 100) -> Dict[str, Any]:
         """Run comprehensive evaluation on trained model"""
         logger.info(f"Running final evaluation with {n_trials} trials...")

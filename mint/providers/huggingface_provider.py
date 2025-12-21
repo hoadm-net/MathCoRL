@@ -46,7 +46,8 @@ class HuggingFaceProvider:
         self,
         model_name: str,
         device: str = "cuda",
-        load_in_8bit: bool = True,
+        load_in_8bit: bool = False,
+        load_in_4bit: bool = False,
         max_memory: Optional[Dict[int, str]] = None,
         temperature: float = 0.0,
         max_new_tokens: int = 1000,
@@ -59,6 +60,7 @@ class HuggingFaceProvider:
             model_name: HuggingFace model identifier (e.g., "deepseek-ai/DeepSeek-R1-Distill-Qwen-7B")
             device: Device to use ("cuda", "cpu", or specific like "cuda:0")
             load_in_8bit: Whether to use 8-bit quantization (saves memory)
+            load_in_4bit: Whether to use 4-bit quantization (saves more memory, for large models)
             max_memory: Maximum memory per GPU (e.g., {0: "20GB"})
             temperature: Sampling temperature (0.0 = deterministic)
             max_new_tokens: Maximum tokens to generate
@@ -70,13 +72,24 @@ class HuggingFaceProvider:
         self.max_new_tokens = max_new_tokens
         
         logger.info(f"Initializing HuggingFace provider: {model_name}")
-        logger.info(f"Device: {self.device}, 8-bit: {load_in_8bit}")
+        logger.info(f"Device: {self.device}, 8-bit: {load_in_8bit}, 4-bit: {load_in_4bit}")
         
         # Configure quantization for memory efficiency
         quantization_config = None
         device_map_value = None
         
-        if load_in_8bit and self.device != "cpu":
+        if load_in_4bit and self.device != "cpu":
+            # 4-bit quantization - best for very large models (14B+)
+            quantization_config = BitsAndBytesConfig(
+                load_in_4bit=True,
+                bnb_4bit_compute_dtype=torch.float16,
+                bnb_4bit_use_double_quant=True,
+                bnb_4bit_quant_type="nf4"
+            )
+            device_map_value = "auto"
+            logger.info("Using 4-bit NF4 quantization (optimized for large models)")
+        elif load_in_8bit and self.device != "cpu":
+            # 8-bit quantization
             quantization_config = BitsAndBytesConfig(
                 load_in_8bit=True,
                 llm_int8_threshold=6.0,
@@ -265,7 +278,8 @@ class DeepSeekR1Provider(HuggingFaceProvider):
         self,
         model_variant: str = "7B",
         device: str = "cuda",
-        load_in_8bit: bool = True,
+        load_in_8bit: bool = False,
+        load_in_4bit: bool = False,
         temperature: float = 0.0,
         max_new_tokens: int = 1000,
         cache_dir: Optional[str] = None
@@ -277,6 +291,7 @@ class DeepSeekR1Provider(HuggingFaceProvider):
             model_variant: Model size ("7B", "1.5B", "14B", "8B")
             device: Device to use ("cuda" or "cpu")
             load_in_8bit: Use 8-bit quantization
+            load_in_4bit: Use 4-bit quantization (for 14B+ models)
             temperature: Sampling temperature
             max_new_tokens: Maximum tokens to generate
             cache_dir: Model cache directory
@@ -294,6 +309,7 @@ class DeepSeekR1Provider(HuggingFaceProvider):
             model_name=model_name,
             device=device,
             load_in_8bit=load_in_8bit,
+            load_in_4bit=load_in_4bit,
             temperature=temperature,
             max_new_tokens=max_new_tokens,
             cache_dir=cache_dir
@@ -422,7 +438,8 @@ class QwenMathProvider(HuggingFaceProvider):
         self,
         model_variant: str = "7B",
         device: str = "cuda",
-        load_in_8bit: bool = True,
+        load_in_8bit: bool = False,
+        load_in_4bit: bool = False,
         temperature: float = 0.0,
         max_new_tokens: int = 1000,
         cache_dir: Optional[str] = None
@@ -434,6 +451,7 @@ class QwenMathProvider(HuggingFaceProvider):
             model_variant: Model size ("7B", "72B", "1.5B")
             device: Device to use ("cuda" or "cpu")
             load_in_8bit: Use 8-bit quantization (recommended for 7B+)
+            load_in_4bit: Use 4-bit quantization (recommended for 72B)
             temperature: Sampling temperature (0.0 = deterministic)
             max_new_tokens: Maximum tokens to generate
             cache_dir: Model cache directory
@@ -449,15 +467,17 @@ class QwenMathProvider(HuggingFaceProvider):
         
         # Adjust quantization based on model size
         if model_variant == "72B":
-            logger.warning(
-                "Qwen2.5-Math-72B requires significant GPU memory (40GB+). "
-                "Ensure you have adequate resources or consider using 7B variant."
-            )
+            if not load_in_4bit:
+                logger.warning(
+                    "Qwen2.5-Math-72B requires significant GPU memory (40GB+). "
+                    "Consider using load_in_4bit=True or the 7B variant."
+                )
         
         super().__init__(
             model_name=model_name,
             device=device,
             load_in_8bit=load_in_8bit,
+            load_in_4bit=load_in_4bit,
             temperature=temperature,
             max_new_tokens=max_new_tokens,
             cache_dir=cache_dir
@@ -598,3 +618,237 @@ Solution:
     def __repr__(self) -> str:
         """String representation."""
         return f"QwenMathProvider(variant={self.variant}, device={self.device})"
+
+
+class QwenCoderProvider(HuggingFaceProvider):
+    """
+    Specialized provider for Qwen2.5-Coder models.
+    
+    Pre-configured for optimal Qwen2.5-Coder inference with:
+    - Code generation and reasoning capabilities
+    - Support for mathematical problem solving through code
+    - Optimized generation parameters
+    
+    Qwen2.5-Coder models excel at generating code for solving mathematical
+    problems, making them ideal for PAL and PoT methods.
+    
+    Example:
+        >>> provider = QwenCoderProvider(model_variant="7B")
+        >>> response = provider.solve_math_problem("What is 15 + 27?")
+    """
+    
+    # Model variants
+    MODELS = {
+        "7B": "Qwen/Qwen2.5-Coder-7B-Instruct",
+        "32B": "Qwen/Qwen2.5-Coder-32B-Instruct",
+        "1.5B": "Qwen/Qwen2.5-Coder-1.5B-Instruct",
+    }
+    
+    def __init__(
+        self,
+        model_variant: str = "7B",
+        device: str = "cuda",
+        load_in_8bit: bool = False,
+        load_in_4bit: bool = False,
+        temperature: float = 0.0,
+        max_new_tokens: int = 1000,
+        cache_dir: Optional[str] = None
+    ):
+        """
+        Initialize Qwen2.5-Coder provider.
+        
+        Args:
+            model_variant: Model size ("7B", "32B", "1.5B")
+            device: Device to use ("cuda" or "cpu")
+            load_in_8bit: Use 8-bit quantization
+            load_in_4bit: Use 4-bit quantization (recommended for 32B)
+            temperature: Sampling temperature (0.0 = deterministic)
+            max_new_tokens: Maximum tokens to generate
+            cache_dir: Model cache directory
+        """
+        if model_variant not in self.MODELS:
+            raise ValueError(
+                f"Invalid model variant: {model_variant}. "
+                f"Choose from: {list(self.MODELS.keys())}"
+            )
+        
+        model_name = self.MODELS[model_variant]
+        self.variant = model_variant
+        
+        # Adjust quantization based on model size
+        if model_variant == "32B":
+            if not load_in_4bit and not load_in_8bit:
+                logger.warning(
+                    "Qwen2.5-Coder-32B requires significant GPU memory (30GB+). "
+                    "Consider using load_in_4bit=True or the 7B variant."
+                )
+        
+        super().__init__(
+            model_name=model_name,
+            device=device,
+            load_in_8bit=load_in_8bit,
+            load_in_4bit=load_in_4bit,
+            temperature=temperature,
+            max_new_tokens=max_new_tokens,
+            cache_dir=cache_dir
+        )
+    
+    def generate(
+        self,
+        prompt: str,
+        temperature: Optional[float] = None,
+        max_new_tokens: Optional[int] = None,
+        return_full_text: bool = False
+    ) -> str:
+        """
+        Generate text using Qwen2.5-Coder with chat template.
+        
+        Qwen2.5-Coder-Instruct models expect chat format, not raw prompts.
+        Reference: https://www.datacamp.com/tutorial/qwen-coder-2-5
+        """
+        # Format as chat message
+        messages = [
+            {"role": "system", "content": "You are Qwen, a helpful coding assistant."},
+            {"role": "user", "content": prompt}
+        ]
+        
+        # Apply chat template
+        formatted_prompt = self.tokenizer.apply_chat_template(
+            messages,
+            tokenize=False,
+            add_generation_prompt=True
+        )
+        
+        # Tokenize
+        model_inputs = self.tokenizer(
+            [formatted_prompt],
+            return_tensors="pt",
+            padding=True,
+            truncation=True,
+            max_length=8192
+        ).to(self.model.device)
+        
+        # Prepare generation config
+        gen_config = GenerationConfig(
+            max_new_tokens=max_new_tokens or self.max_new_tokens,
+            temperature=temperature or self.temperature if (temperature or self.temperature) > 0 else 0.7,
+            do_sample=True,
+            top_p=0.95,
+            repetition_penalty=1.2,
+            pad_token_id=self.tokenizer.pad_token_id,
+            eos_token_id=self.tokenizer.eos_token_id
+        )
+        
+        # Generate
+        with torch.no_grad():
+            generated_ids = self.model.generate(
+                **model_inputs,
+                generation_config=gen_config
+            )
+        
+        # Slice to only get the generated part (remove input prompt)
+        # This is critical for Qwen models
+        generated_ids = [
+            output_ids[len(input_ids):] 
+            for input_ids, output_ids in zip(model_inputs.input_ids, generated_ids)
+        ]
+        
+        # Decode
+        response = self.tokenizer.batch_decode(
+            generated_ids, 
+            skip_special_tokens=True
+        )[0].strip()
+        
+        return response
+    
+    def solve_math_problem(
+        self,
+        question: str,
+        context: str = "",
+        method: str = "pot"
+    ) -> str:
+        """
+        Solve mathematical problem using Qwen2.5-Coder.
+        
+        Qwen2.5-Coder excels at generating code for mathematical problems,
+        making it particularly effective with code-based methods (PAL, PoT, FPP).
+        
+        Args:
+            question: Mathematical question
+            context: Additional context (optional)
+            method: Solution method (default: pot)
+        
+        Returns:
+            Generated solution
+        """
+        prompt = f"{context}\n\n{question}".strip() if context else question
+        return self.generate(prompt)
+    
+    def __repr__(self) -> str:
+        """String representation."""
+        return f"QwenCoderProvider(variant={self.variant}, device={self.device})"
+
+
+class GPTOSSProvider(HuggingFaceProvider):
+    """
+    Provider for OpenAI GPT-OSS models.
+    
+    Supports GPT-OSS-20B with MXFP4 quantization built-in.
+    - 21B parameters with 3.6B active parameters (MoE)
+    - Runs in ~16GB memory with MXFP4 quantization
+    - Designed for reasoning and agentic tasks
+    
+    Example:
+        >>> provider = GPTOSSProvider(model_variant="20B")
+        >>> response = provider.generate("Solve: 15 + 27")
+    """
+    
+    MODELS = {
+        "20B": "openai/gpt-oss-20b",
+        "120B": "openai/gpt-oss-120b"
+    }
+    
+    def __init__(
+        self,
+        model_variant: str = "20B",
+        device: str = "cuda",
+        temperature: float = 0.0,
+        max_new_tokens: int = 1000,
+        cache_dir: Optional[str] = None
+    ):
+        """
+        Initialize GPT-OSS provider.
+        
+        Note: GPT-OSS models have built-in MXFP4 quantization.
+        Additional quantization is not needed and may cause issues.
+        
+        Args:
+            model_variant: Model size ("20B" or "120B")
+            device: Device to use
+            temperature: Sampling temperature
+            max_new_tokens: Maximum tokens to generate
+            cache_dir: Cache directory for model
+        """
+        if model_variant not in self.MODELS:
+            raise ValueError(f"Unknown variant: {model_variant}. Available: {list(self.MODELS.keys())}")
+        
+        model_name = self.MODELS[model_variant]
+        self.variant = model_variant
+        
+        logger.info(f"Initializing GPT-OSS-{model_variant} provider")
+        logger.info(f"Note: GPT-OSS models have built-in MXFP4 quantization")
+        
+        # Don't use additional quantization - GPT-OSS has built-in MXFP4
+        super().__init__(
+            model_name=model_name,
+            device=device,
+            load_in_8bit=False,
+            load_in_4bit=False,
+            temperature=temperature,
+            max_new_tokens=max_new_tokens,
+            cache_dir=cache_dir
+        )
+    
+    def __repr__(self) -> str:
+        """String representation."""
+        return f"GPTOSSProvider(variant={self.variant}, device={self.device})"
