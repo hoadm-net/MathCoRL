@@ -198,7 +198,7 @@ class FunctionPrototypePrompting:
             context: Optional context information
             
         Returns:
-            Dictionary with detailed results
+            Dictionary with detailed results including token usage
         """
         result = {
             'question': question,
@@ -209,7 +209,10 @@ class FunctionPrototypePrompting:
             'success': False,
             'variant_type': getattr(self, '_variant_type', 'baseline'),
             'policy_type': getattr(self, '_policy_type', 'retrieval'),
-            'use_policy': getattr(self, '_use_policy', True)
+            'use_policy': getattr(self, '_use_policy', True),
+            'input_tokens': 0,
+            'output_tokens': 0,
+            'total_tokens': 0
         }
         
         try:
@@ -221,8 +224,31 @@ class FunctionPrototypePrompting:
             else:
                 prompt = create_fpp_prompt(question, context)
             
-            # Generate code using LLM
-            raw_code = self._call_llm(prompt, question, context)
+            # Generate code using LLM with token tracking
+            from .tracking import track_api_call, extract_tokens_from_response, count_tokens_universal
+            
+            with track_api_call("FPP", self.model, question, context) as tracker:
+                # Estimate input tokens
+                input_tokens = count_tokens_universal(prompt, self.model)
+                
+                raw_code = self._call_llm(prompt, question, context)
+                
+                # Extract actual token counts if available
+                if hasattr(self, '_last_response') and self._last_response:
+                    actual_input_tokens, output_tokens = extract_tokens_from_response(self._last_response)
+                    if actual_input_tokens > 0:
+                        input_tokens = actual_input_tokens
+                else:
+                    # Estimate output tokens from raw_code
+                    output_tokens = count_tokens_universal(raw_code if raw_code else "", self.model)
+                
+                tracker.set_tokens(input_tokens, output_tokens)
+                
+                # Store token counts in result
+                result['input_tokens'] = input_tokens
+                result['output_tokens'] = output_tokens
+                result['total_tokens'] = input_tokens + output_tokens
+            
             if not raw_code:
                 result['error'] = "No response received from LLM"
                 return result

@@ -1,0 +1,38 @@
+{
+  "dataset": "GSM8K",
+  "n_epochs": 2,
+  "n_samples": 50,
+  "total_time": 263.37369979100185,
+  "avg_epoch_time": 131.68684989550093,
+  "avg_time_per_sample": 2.6337369979100185,
+  "initial_memory": {
+    "rss": 432.96875,
+    "vms": 401779.484375
+  },
+  "epoch_metrics": [
+    {
+      "epoch": 1,
+      "epoch_time": 138.34521087500616,
+      "loss": -0.3559424037596546,
+      "reward": 0.5372168681025505,
+      "accuracy": 0.68,
+      "memory_rss": 613.9375,
+      "memory_vms": 402232.9375,
+      "gpu_allocated": 0,
+      "gpu_cached": 0,
+      "time_per_sample": 2.766904217500123
+    },
+    {
+      "epoch": 2,
+      "epoch_time": 125.0284889159957,
+      "loss": -0.2295066048942681,
+      "reward": 0.5666272222697732,
+      "accuracy": 0.76,
+      "memory_rss": 595.484375,
+      "memory_vms": 402232.9375,
+      "gpu_allocated": 0,
+      "gpu_cached": 0,
+      "time_per_sample": 2.500569778319914
+    }
+  ]
+}

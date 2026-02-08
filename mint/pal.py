@@ -18,6 +18,35 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
+def _convert_to_json_serializable(value):
+    """Convert sympy and other non-serializable objects to Python native types."""
+    if value is None:
+        return None
+    
+    # Handle sympy types
+    try:
+        # Check if it's a sympy type
+        if hasattr(value, '__module__') and 'sympy' in str(value.__module__):
+            # Try to convert to float first
+            try:
+                return float(value)
+            except (TypeError, ValueError):
+                # If can't convert to float, convert to string
+                return str(value)
+    except:
+        pass
+    
+    # Handle numpy types
+    if hasattr(value, 'item'):
+        try:
+            return value.item()
+        except:
+            pass
+    
+    # Return as-is if already serializable
+    return value
+
+
 class ProgramAidedLanguageModel:
     """
     PAL (Program-aided Language Models) system for mathematical problem solving.
@@ -160,7 +189,10 @@ Please provide both the reasoning steps and the Python code to solve this proble
                 'question': question,
                 'context': context,
                 'model': self.model_name,
-                'method': 'PAL'
+                'method': 'PAL',
+                'input_tokens': input_tokens,
+                'output_tokens': output_tokens,
+                'total_tokens': input_tokens + output_tokens
             }
             
         except Exception as e:
@@ -174,7 +206,10 @@ Please provide both the reasoning steps and the Python code to solve this proble
                 'question': question,
                 'context': context,
                 'model': self.model_name,
-                'method': 'PAL'
+                'method': 'PAL',
+                'input_tokens': 0,
+                'output_tokens': 0,
+                'total_tokens': 0
             }
     
     def solve_silent(self, question: str, context: str = "") -> Dict[str, Any]:
@@ -292,10 +327,9 @@ Please provide both the reasoning steps and the Python code to solve this proble
             from contextlib import redirect_stdout
             
             output = ""
-            locals_dict = {}
             
             try:
-                # Re-execute to capture stdout and locals
+                # Re-execute to capture stdout only (not locals to avoid serialization errors)
                 f = io.StringIO()
                 namespace = {}
                 
@@ -307,8 +341,6 @@ Please provide both the reasoning steps and the Python code to solve this proble
                     exec(code, namespace, namespace)
                 
                 output = f.getvalue()
-                locals_dict = {k: v for k, v in namespace.items() 
-                              if not k.startswith('__') and not callable(v)}
                 
             except Exception:
                 # If re-execution fails, just use what we have
@@ -317,8 +349,7 @@ Please provide both the reasoning steps and the Python code to solve this proble
             execution_result = {
                 'output': output,
                 'error': error_message,
-                'locals': locals_dict,
-                'result': result_value
+                'result': _convert_to_json_serializable(result_value)
             }
             
             if show_output:
@@ -341,7 +372,6 @@ Please provide both the reasoning steps and the Python code to solve this proble
             return {
                 'output': '',
                 'error': error_msg,
-                'locals': {},
                 'result': None
             }
     
@@ -362,25 +392,6 @@ Please provide both the reasoning steps and the Python code to solve this proble
                 return float(execution_result['result'])
             except (ValueError, TypeError):
                 pass
-        
-        # Then try to get 'answer' variable from execution locals
-        if 'locals' in execution_result and execution_result['locals']:
-            locals_dict = execution_result['locals']
-            
-            # Look for 'answer' variable first (PAL commonly uses this)
-            if 'answer' in locals_dict:
-                try:
-                    return float(locals_dict['answer'])
-                except (ValueError, TypeError):
-                    pass
-            
-            # Look for other potential answer variables
-            for var_name in ['result', 'final_answer', 'solution', 'total', 'ans']:
-                if var_name in locals_dict:
-                    try:
-                        return float(locals_dict[var_name])
-                    except (ValueError, TypeError):
-                        continue
         
         # Try to extract from output text
         if 'output' in execution_result and execution_result['output']:

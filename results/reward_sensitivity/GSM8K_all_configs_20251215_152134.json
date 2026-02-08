@@ -1,0 +1,167 @@
+{
+  "baseline": {
+    "config_name": "baseline",
+    "config": {
+      "lambda_accuracy": 0.6,
+      "lambda_similarity": 0.3,
+      "lambda_diversity": 0.1,
+      "description": "Current default - balanced with accuracy priority"
+    },
+    "dataset": "GSM8K",
+    "epochs": 2,
+    "samples_per_epoch": 50,
+    "seed": 42,
+    "training_history": [
+      {
+        "loss": -0.31618502795521636,
+        "reward": 0.5128964567780493,
+        "accuracy": 0.66,
+        "total_samples": 50
+      },
+      {
+        "loss": -0.3735547628992208,
+        "reward": 0.5301404223889112,
+        "accuracy": 0.7,
+        "total_samples": 50
+      }
+    ],
+    "final_metrics": {
+      "accuracy": 0.7,
+      "reward": 0.5301404223889112,
+      "final_loss": -0.3735547628992208
+    },
+    "timestamp": "2025-12-15T15:04:22.746254"
+  },
+  "accuracy_focused": {
+    "config_name": "accuracy_focused",
+    "config": {
+      "lambda_accuracy": 0.9,
+      "lambda_similarity": 0.05,
+      "lambda_diversity": 0.05,
+      "description": "Maximize correctness - minimal similarity/diversity"
+    },
+    "dataset": "GSM8K",
+    "epochs": 2,
+    "samples_per_epoch": 50,
+    "seed": 42,
+    "training_history": [
+      {
+        "loss": -0.3871355451270938,
+        "reward": 0.7228530524522067,
+        "accuracy": 0.78,
+        "total_samples": 50
+      },
+      {
+        "loss": -0.3408261581324041,
+        "reward": 0.7021293727010489,
+        "accuracy": 0.76,
+        "total_samples": 50
+      }
+    ],
+    "final_metrics": {
+      "accuracy": 0.76,
+      "reward": 0.7021293727010489,
+      "final_loss": -0.3408261581324041
+    },
+    "timestamp": "2025-12-15T15:09:30.561584"
+  },
+  "diversity_focused": {
+    "config_name": "diversity_focused",
+    "config": {
+      "lambda_accuracy": 0.4,
+      "lambda_similarity": 0.5,
+      "lambda_diversity": 0.1,
+      "description": "Emphasize semantic similarity - explore varied approaches"
+    },
+    "dataset": "GSM8K",
+    "epochs": 2,
+    "samples_per_epoch": 50,
+    "seed": 42,
+    "training_history": [
+      {
+        "loss": -0.2908576973366189,
+        "reward": 0.44620574072003344,
+        "accuracy": 0.68,
+        "total_samples": 50
+      },
+      {
+        "loss": -0.2737825306155719,
+        "reward": 0.5044084853231907,
+        "accuracy": 0.84,
+        "total_samples": 50
+      }
+    ],
+    "final_metrics": {
+      "accuracy": 0.84,
+      "reward": 0.5044084853231907,
+      "final_loss": -0.2737825306155719
+    },
+    "timestamp": "2025-12-15T15:13:53.845294"
+  },
+  "balanced": {
+    "config_name": "balanced",
+    "config": {
+      "lambda_accuracy": 0.5,
+      "lambda_similarity": 0.25,
+      "lambda_diversity": 0.25,
+      "description": "Equal consideration of all objectives"
+    },
+    "dataset": "GSM8K",
+    "epochs": 2,
+    "samples_per_epoch": 50,
+    "seed": 42,
+    "training_history": [
+      {
+        "loss": -0.2990739054515871,
+        "reward": 0.48168976314365863,
+        "accuracy": 0.76,
+        "total_samples": 50
+      },
+      {
+        "loss": -0.3007153124509205,
+        "reward": 0.4805265932530165,
+        "accuracy": 0.76,
+        "total_samples": 50
+      }
+    ],
+    "final_metrics": {
+      "accuracy": 0.76,
+      "reward": 0.4805265932530165,
+      "final_loss": -0.3007153124509205
+    },
+    "timestamp": "2025-12-15T15:17:35.168777"
+  },
+  "length_penalized": {
+    "config_name": "length_penalized",
+    "config": {
+      "lambda_accuracy": 0.5,
+      "lambda_similarity": 0.2,
+      "lambda_diversity": 0.3,
+      "description": "Prefer diverse examples - reduce redundancy"
+    },
+    "dataset": "GSM8K",
+    "epochs": 2,
+    "samples_per_epoch": 50,
+    "seed": 42,
+    "training_history": [
+      {
+        "loss": -0.25170233402728626,
+        "reward": 0.42243190580606466,
+        "accuracy": 0.68,
+        "total_samples": 50
+      },
+      {
+        "loss": -0.2717343836482178,
+        "reward": 0.5354549132585525,
+        "accuracy": 0.86,
+        "total_samples": 50
+      }
+    ],
+    "final_metrics": {
+      "accuracy": 0.86,
+      "reward": 0.5354549132585525,
+      "final_loss": -0.2717343836482178
+    },
+    "timestamp": "2025-12-15T15:21:34.636285"
+  }
+}

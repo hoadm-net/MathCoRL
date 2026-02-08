@@ -164,7 +164,10 @@ Let me work through this:"""
                 'question': question,
                 'context': context,
                 'model': self.model_name,
-                'method': 'Chain-of-Thought'
+                'method': 'Chain-of-Thought',
+                'input_tokens': input_tokens,
+                'output_tokens': output_tokens,
+                'total_tokens': input_tokens + output_tokens
             }
             
         except Exception as e:
@@ -175,7 +178,10 @@ Let me work through this:"""
                 'question': question,
                 'context': context,
                 'model': self.model_name,
-                'method': 'Chain-of-Thought'
+                'method': 'Chain-of-Thought',
+                'input_tokens': 0,
+                'output_tokens': 0,
+                'total_tokens': 0
             }
     
     def solve_silent(self, question: str, context: str = "") -> Dict[str, Any]:

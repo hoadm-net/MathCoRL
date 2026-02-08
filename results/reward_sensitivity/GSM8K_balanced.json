@@ -1,0 +1,33 @@
+{
+  "config_name": "balanced",
+  "config": {
+    "lambda_accuracy": 0.5,
+    "lambda_similarity": 0.25,
+    "lambda_diversity": 0.25,
+    "description": "Equal consideration of all objectives"
+  },
+  "dataset": "GSM8K",
+  "epochs": 2,
+  "samples_per_epoch": 50,
+  "seed": 42,
+  "training_history": [
+    {
+      "loss": -0.2990739054515871,
+      "reward": 0.48168976314365863,
+      "accuracy": 0.76,
+      "total_samples": 50
+    },
+    {
+      "loss": -0.3007153124509205,
+      "reward": 0.4805265932530165,
+      "accuracy": 0.76,
+      "total_samples": 50
+    }
+  ],
+  "final_metrics": {
+    "accuracy": 0.76,
+    "reward": 0.4805265932530165,
+    "final_loss": -0.3007153124509205
+  },
+  "timestamp": "2025-12-15T15:17:35.168777"
+}

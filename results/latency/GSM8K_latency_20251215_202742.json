@@ -1,0 +1,212 @@
+{
+  "dataset": "GSM8K",
+  "num_samples": 20,
+  "k": 3,
+  "seed": 42,
+  "timestamp": "2025-12-15T20:27:42.045901",
+  "methods": {
+    "zero_shot": {
+      "aggregated": {
+        "method": "zero_shot",
+        "num_samples": 20,
+        "selection_mean": 0.0,
+        "selection_std": 0.0,
+        "generation_mean": 7.311493391171097e-07,
+        "generation_std": 6.772036256300559e-07,
+        "execution_mean": 0.0,
+        "execution_std": 0.0,
+        "total_mean": 9.812021744437515e-07,
+        "total_std": 8.750306184303003e-07,
+        "success_rate": 0.0,
+        "percentiles": {
+          "p50": 6.250047590583563e-07,
+          "p90": 1.6702048014849442e-06,
+          "p95": 2.8955604648217566e-06,
+          "p99": 3.846319741569458e-06
+        }
+      },
+      "individual": [
+        {
+          "method": "zero_shot",
+          "selection_time": 0.0,
+          "generation_time": 2.833010512404144e-06,
+          "execution_time": 0.0,
+          "total_time": 4.084009560756385e-06,
+          "success": false,
+          "error": "FunctionPrototypePrompting.solve() got an unexpected keyword argument 'return_code'"
+        },
+        {
+          "method": "zero_shot",
+          "selection_time": 0.0,
+          "generation_time": 9.590003173798323e-07,
+          "execution_time": 0.0,
+          "total_time": 1.5410041669383645e-06,
+          "success": false,
+          "error": "FunctionPrototypePrompting.solve() got an unexpected keyword argument 'return_code'"
+        },
+        {
+          "method": "zero_shot",
+          "selection_time": 0.0,
+          "generation_time": 5.409965524449944e-07,
+          "execution_time": 0.0,
+          "total_time": 8.750066626816988e-07,
+          "success": false,
+          "error": "FunctionPrototypePrompting.solve() got an unexpected keyword argument 'return_code'"
+        },
+        {
+          "method": "zero_shot",
+          "selection_time": 0.0,
+          "generation_time": 4.5799242798238993e-07,
+          "execution_time": 0.0,
+          "total_time": 6.250047590583563e-07,
+          "success": false,
+          "error": "FunctionPrototypePrompting.solve() got an unexpected keyword argument 'return_code'"
+        },
+        {
+          "method": "zero_shot",
+          "selection_time": 0.0,
+          "generation_time": 5.00003807246685e-07,
+          "execution_time": 0.0,
+          "total_time": 6.659975042566657e-07,
+          "success": false,
+          "error": "FunctionPrototypePrompting.solve() got an unexpected keyword argument 'return_code'"
+        },
+        {
+          "method": "zero_shot",
+          "selection_time": 0.0,
+          "generation_time": 5.420006345957518e-07,
+          "execution_time": 0.0,
+          "total_time": 7.500057108700275e-07,
+          "success": false,
+          "error": "FunctionPrototypePrompting.solve() got an unexpected keyword argument 'return_code'"
+        },
+        {
+          "method": "zero_shot",
+          "selection_time": 0.0,
+          "generation_time": 5.00003807246685e-07,
+          "execution_time": 0.0,
+          "total_time": 6.250047590583563e-07,
+          "success": false,
+          "error": "FunctionPrototypePrompting.solve() got an unexpected keyword argument 'return_code'"
+        },
+        {
+          "method": "zero_shot",
+          "selection_time": 0.0,
+          "generation_time": 4.159956006333232e-07,
+          "execution_time": 0.0,
+          "total_time": 5.829933797940612e-07,
+          "success": false,
+          "error": "FunctionPrototypePrompting.solve() got an unexpected keyword argument 'return_code'"
+        },
+        {
+          "method": "zero_shot",
+          "selection_time": 0.0,
+          "generation_time": 4.169996827840805e-07,
+          "execution_time": 0.0,
+          "total_time": 6.250047590583563e-07,
+          "success": false,
+          "error": "FunctionPrototypePrompting.solve() got an unexpected keyword argument 'return_code'"
+        },
+        {
+          "method": "zero_shot",
+          "selection_time": 0.0,
+          "generation_time": 4.580069798976183e-07,
+          "execution_time": 0.0,
+          "total_time": 5.829933797940612e-07,
+          "success": false,
+          "error": "FunctionPrototypePrompting.solve() got an unexpected keyword argument 'return_code'"
+        },
+        {
+          "method": "zero_shot",
+          "selection_time": 0.0,
+          "generation_time": 6.67001586407423e-07,
+          "execution_time": 0.0,
+          "total_time": 9.170034900307655e-07,
+          "success": false,
+          "error": "FunctionPrototypePrompting.solve() got an unexpected keyword argument 'return_code'"
+        },
+        {
+          "method": "zero_shot",
+          "selection_time": 0.0,
+          "generation_time": 4.580069798976183e-07,
+          "execution_time": 0.0,
+          "total_time": 6.250047590583563e-07,
+          "success": false,
+          "error": "FunctionPrototypePrompting.solve() got an unexpected keyword argument 'return_code'"
+        },
+        {
+          "method": "zero_shot",
+          "selection_time": 0.0,
+          "generation_time": 4.5799242798238993e-07,
+          "execution_time": 0.0,
+          "total_time": 6.250047590583563e-07,
+          "success": false,
+          "error": "FunctionPrototypePrompting.solve() got an unexpected keyword argument 'return_code'"
+        },
+        {
+          "method": "zero_shot",
+          "selection_time": 0.0,
+          "generation_time": 2.6249908842146397e-06,
+          "execution_time": 0.0,
+          "total_time": 2.833010512404144e-06,
+          "success": false,
+          "error": "FunctionPrototypePrompting.solve() got an unexpected keyword argument 'return_code'"
+        },
+        {
+          "method": "zero_shot",
+          "selection_time": 0.0,
+          "generation_time": 5.00003807246685e-07,
+          "execution_time": 0.0,
+          "total_time": 6.250047590583563e-07,
+          "success": false,
+          "error": "FunctionPrototypePrompting.solve() got an unexpected keyword argument 'return_code'"
+        },
+        {
+          "method": "zero_shot",
+          "selection_time": 0.0,
+          "generation_time": 4.999892553314567e-07,
+          "execution_time": 0.0,
+          "total_time": 6.249902071431279e-07,
+          "success": false,
+          "error": "FunctionPrototypePrompting.solve() got an unexpected keyword argument 'return_code'"
+        },
+        {
+          "method": "zero_shot",
+          "selection_time": 0.0,
+          "generation_time": 4.5799242798238993e-07,
+          "execution_time": 0.0,
+          "total_time": 5.839974619448185e-07,
+          "success": false,
+          "error": "FunctionPrototypePrompting.solve() got an unexpected keyword argument 'return_code'"
+        },
+        {
+          "method": "zero_shot",
+          "selection_time": 0.0,
+          "generation_time": 5.00003807246685e-07,
+          "execution_time": 0.0,
+          "total_time": 6.250047590583563e-07,
+          "success": false,
+          "error": "FunctionPrototypePrompting.solve() got an unexpected keyword argument 'return_code'"
+        },
+        {
+          "method": "zero_shot",
+          "selection_time": 0.0,
+          "generation_time": 4.5799242798238993e-07,
+          "execution_time": 0.0,
+          "total_time": 6.249902071431279e-07,
+          "success": false,
+          "error": "FunctionPrototypePrompting.solve() got an unexpected keyword argument 'return_code'"
+        },
+        {
+          "method": "zero_shot",
+          "selection_time": 0.0,
+          "generation_time": 3.7500285543501377e-07,
+          "execution_time": 0.0,
+          "total_time": 5.830079317092896e-07,
+          "success": false,
+          "error": "FunctionPrototypePrompting.solve() got an unexpected keyword argument 'return_code'"
+        }
+      ]
+    }
+  }
+}
