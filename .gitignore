@@ -29,3 +29,4 @@ charts/*
 tracking_export_*.json
 
 plans.txt
+results/
