@@ -347,6 +347,36 @@ MathCoRL welcomes contributions in:
 - **Evaluation Metrics**: Advanced correctness and efficiency measures
 - **Cost Optimization**: More efficient API usage patterns
 
+## 📖 Citation
+
+This repository is the official implementation of the following paper:
+
+> **MathCoRL: Structured function-prototype prompting with policy-guided exemplars for efficient mathematical reasoning**
+> Dinh Minh Hoa, Thien Khai Tran, Bay Vo
+> *Computers and Electrical Engineering*, Volume 134, 111103, 2026 (Elsevier)
+
+If you find this work useful in your research, please cite:
+
+```bibtex
+@article{HOA2026111103,
+  title   = {MathCoRL: Structured function-prototype prompting with policy-guided exemplars for efficient mathematical reasoning},
+  author  = {Dinh Minh Hoa and Thien Khai Tran and Bay Vo},
+  journal = {Computers and Electrical Engineering},
+  volume  = {134},
+  pages   = {111103},
+  year    = {2026},
+  publisher = {Elsevier},
+  doi     = {10.1016/j.compeleceng.2026.111103},
+  url     = {https://www.sciencedirect.com/science/article/pii/S0045790626001758}
+}
+```
+
+## 🔗 Paper
+
+* ScienceDirect: https://www.sciencedirect.com/science/article/pii/S0045790626001758
+* DOI: https://doi.org/10.1016/j.compeleceng.2026.111103
+
+
 ## 📜 **License**
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
